@@ -613,7 +613,7 @@
 
 
 
-//all working
+// //all working
 
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -833,4 +833,4 @@ class DownloadTask {
   });
 }
 
-enum DownloadStatus { downloading, completed, failed }
+enum DownloadStatus { downloading, completed, failed } //filllllllllllllllllllllllllllyyyyyyyyyyyyyyyyyyy functional

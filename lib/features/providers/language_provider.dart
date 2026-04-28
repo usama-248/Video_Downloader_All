@@ -1,0 +1,25 @@
+import 'package:flutter/material.dart';
+
+class LanguageProvider extends ChangeNotifier {
+  Locale _locale = const Locale('en');
+  
+  Locale get locale => _locale;
+  
+  void setLanguage(Locale locale) {
+    _locale = locale;
+    notifyListeners();
+  }
+  
+  String getCurrentLanguageName() {
+    switch (_locale.languageCode) {
+      case 'en':
+        return 'English';
+      case 'ur':
+        return 'اردو';
+      case 'ar':
+        return 'العربية';
+      default:
+        return 'English';
+    }
+  }
+}
