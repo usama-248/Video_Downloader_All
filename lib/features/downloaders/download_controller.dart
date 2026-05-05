@@ -608,13 +608,229 @@
 //   failed,
 // }
 
-
-
-
-
-
 // //all working
 
+// import 'dart:math';
+// import 'package:flutter/material.dart';
+// import 'download_service.dart';
+// import 'dart:io';
+// import 'package:sqflite/sqflite.dart';
+// import 'package:path/path.dart';
+
+// class DownloadController extends ChangeNotifier {
+//   final DownloadService _downloadService = DownloadService();
+//   Database? _database;
+
+//   List<DownloadTask> _activeDownloads = [];
+//   List<Map<String, dynamic>> _downloadHistory = [];
+
+//   List<DownloadTask> get activeDownloads => _activeDownloads;
+//   List<Map<String, dynamic>> get downloadHistory => _downloadHistory;
+
+//   DownloadController() {
+//     _initDatabase();
+//     loadHistory();
+//   }
+
+//   Future<void> _initDatabase() async {
+//     try {
+//       String path = join(await getDatabasesPath(), 'video_downloads.db');
+//       _database = await openDatabase(
+//         path,
+//         version: 1,
+//         onCreate: (db, version) {
+//           return db.execute('''
+//             CREATE TABLE downloads(
+//               id INTEGER PRIMARY KEY AUTOINCREMENT,
+//               fileName TEXT,
+//               filePath TEXT,
+//               videoUrl TEXT,
+//               quality TEXT,
+//               fileSize TEXT,
+//               dateTime TEXT
+//             )
+//           ''');
+//         },
+//       );
+//       debugPrint('✅ Database initialized');
+//     } catch (e) {
+//       debugPrint('❌ Database error: $e');
+//     }
+//   }
+
+//   Future<void> loadHistory() async {
+//     try {
+//       if (_database == null) return;
+//       final List<Map<String, dynamic>> results = await _database!.query(
+//         'downloads',
+//         orderBy: 'dateTime DESC',
+//       );
+//       _downloadHistory = results;
+//       notifyListeners();
+//       debugPrint('📚 Loaded ${results.length} history items');
+//     } catch (e) {
+//       debugPrint('❌ Load history error: $e');
+//     }
+//   }
+
+//   Future<void> startDownload({
+//     required String url,
+//     required String quality,
+//     required String fileName,
+//   }) async {
+//     final taskId = DateTime.now().millisecondsSinceEpoch.toString();
+
+//     final task = DownloadTask(
+//       id: taskId,
+//       url: url,
+//       fileName: fileName,
+//       quality: quality,
+//       progress: 0.0,
+//       status: DownloadStatus.downloading,
+//     );
+
+//     _activeDownloads.add(task);
+//     notifyListeners();
+
+//     debugPrint('🚀 Starting download: $fileName');
+
+//     final savedPath = await _downloadService.downloadVideo(
+//       url: url,
+//       fileName: fileName,
+//       onProgress: (received, total) {
+//         final index = _activeDownloads.indexWhere((t) => t.id == taskId);
+//         if (index != -1 && total > 0) {
+//           _activeDownloads[index].progress = received / total;
+//           notifyListeners();
+//         }
+//       },
+//     );
+
+//     if (savedPath != null && _database != null) {
+//       final file = File(savedPath);
+//       final fileSize = await file.length();
+//       final sizeStr = _formatFileSize(fileSize);
+
+//       await _database!.insert('downloads', {
+//         'fileName': fileName,
+//         'filePath': savedPath,
+//         'videoUrl': url,
+//         'quality': quality,
+//         'fileSize': sizeStr,
+//         'dateTime': DateTime.now().toIso8601String(),
+//       });
+
+//       await loadHistory();
+
+//       _activeDownloads.removeWhere((t) => t.id == taskId);
+//       notifyListeners();
+
+//       debugPrint('✅ Download saved to history: $fileName');
+//     } else {
+//       final index = _activeDownloads.indexWhere((t) => t.id == taskId);
+//       if (index != -1) {
+//         _activeDownloads[index].status = DownloadStatus.failed;
+//         notifyListeners();
+//       }
+//       debugPrint('❌ Download failed: $fileName');
+//     }
+//   }
+
+//   String _formatFileSize(int bytes) {
+//     if (bytes <= 0) return '0 B';
+//     const suffixes = ['B', 'KB', 'MB', 'GB'];
+//     var i = (log(bytes) / log(1024)).floor();
+//     return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
+//   }
+
+//   Future<void> deleteHistoryItem(int id, String filePath) async {
+//     try {
+//       await _downloadService.deleteVideo(filePath);
+//       if (_database != null) {
+//         await _database!.delete('downloads', where: 'id = ?', whereArgs: [id]);
+//       }
+//       await loadHistory();
+//       debugPrint('🗑️ Deleted history item: $id');
+//     } catch (e) {
+//       debugPrint('❌ Delete error: $e');
+//     }
+//   }
+
+//   Future<void> clearAllHistory() async {
+//     try {
+//       for (var item in _downloadHistory) {
+//         await _downloadService.deleteVideo(item['filePath']);
+//       }
+//       if (_database != null) {
+//         await _database!.delete('downloads');
+//       }
+//       await loadHistory();
+//       debugPrint('🗑️ Cleared all history');
+//     } catch (e) {
+//       debugPrint('❌ Clear history error: $e');
+//     }
+//   }
+
+//   // Add this method to add to history
+//   Future<void> addToHistory({
+//     required String fileName,
+//     required String filePath,
+//     required String videoUrl,
+//     required String quality,
+//   }) async {
+//     if (_database != null) {
+//       final sizeStr = await _getFileSize(filePath);
+//       await _database!.insert('downloads', {
+//         'fileName': fileName,
+//         'filePath': filePath,
+//         'videoUrl': videoUrl,
+//         'quality': quality,
+//         'fileSize': sizeStr,
+//         'dateTime': DateTime.now().toIso8601String(),
+//       });
+//       await loadHistory();
+//       debugPrint('✅ Added to history: $fileName');
+//     }
+//   }
+
+//   Future<String> _getFileSize(String filePath) async {
+//     try {
+//       final file = File(filePath);
+//       if (await file.exists()) {
+//         final size = await file.length();
+//         return _formatFileSize(size);
+//       }
+//     } catch (e) {}
+//     return 'Unknown';
+//   }
+
+//   void cancelDownload(String taskId) {
+//     _activeDownloads.removeWhere((task) => task.id == taskId);
+//     notifyListeners();
+//   }
+// }
+
+// class DownloadTask {
+//   final String id;
+//   final String url;
+//   final String fileName;
+//   final String quality;
+//   double progress;
+//   DownloadStatus status;
+
+//   DownloadTask({
+//     required this.id,
+//     required this.url,
+//     required this.fileName,
+//     required this.quality,
+//     required this.progress,
+//     required this.status,
+//   });
+// }
+
+// enum DownloadStatus { downloading, completed, failed } //filllllllllllllllllllllllllllyyyyyyyyyyyyyyyyyyy functional
+
+// Add this import at the top
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'download_service.dart';
@@ -776,7 +992,7 @@ class DownloadController extends ChangeNotifier {
     }
   }
 
-  // Add this method to add to history
+  // FIXED: This method now properly adds to history and refreshes
   Future<void> addToHistory({
     required String fileName,
     required String filePath,
@@ -793,8 +1009,12 @@ class DownloadController extends ChangeNotifier {
         'fileSize': sizeStr,
         'dateTime': DateTime.now().toIso8601String(),
       });
+
+      // CRITICAL FIX: Force reload history and notify UI
       await loadHistory();
-      debugPrint('✅ Added to history: $fileName');
+
+      debugPrint('✅ Added to history and refreshed: $fileName');
+      debugPrint('📊 Total history items: ${_downloadHistory.length}');
     }
   }
 
@@ -833,4 +1053,4 @@ class DownloadTask {
   });
 }
 
-enum DownloadStatus { downloading, completed, failed } //filllllllllllllllllllllllllllyyyyyyyyyyyyyyyyyyy functional
+enum DownloadStatus { downloading, completed, failed }

@@ -1,139 +1,314 @@
-// //workingggggggggggggg
-
 // import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
+// import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 // import 'package:flutter/material.dart';
 // import 'package:provider/provider.dart';
 // import 'package:open_file/open_file.dart';
+// import 'package:video_thumbnail/video_thumbnail.dart';
+// import 'package:path_provider/path_provider.dart';
+// import 'dart:io';
 
 // class HistoryScreen extends StatelessWidget {
 //   const HistoryScreen({super.key});
 
 //   @override
 //   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text('Download History'),
-//         actions: [
-//           Consumer<DownloadController>(
-//             builder: (context, controller, child) {
-//               if (controller.downloadHistory.isEmpty) return const SizedBox();
-//               return IconButton(
-//                 icon: const Icon(Icons.delete_sweep),
-//                 onPressed: () => _clearAll(context, controller),
-//               );
-//             },
-//           ),
-//         ],
-//       ),
-//       body: Consumer<DownloadController>(
-//         builder: (context, controller, child) {
-//           if (controller.downloadHistory.isEmpty) {
-//             return const Center(
-//               child: Column(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   Icon(Icons.video_library, size: 64, color: Colors.grey),
-//                   SizedBox(height: 16),
-//                   Text('No downloads yet'),
-//                   SizedBox(height: 8),
-//                   Text('Download videos from the browser'),
-//                 ],
-//               ),
-//             );
-//           }
+//     final localizations = AppLocalizations.of(context);
 
-//           return ListView.builder(
-//             itemCount: controller.downloadHistory.length,
-//             itemBuilder: (context, index) {
-//               final item = controller.downloadHistory[index];
-//               return Card(
-//                 margin: const EdgeInsets.all(8),
-//                 child: ListTile(
-//                   leading: const Icon(Icons.video_file, size: 40),
-//                   title: Text(item['fileName'], maxLines: 1),
-//                   subtitle: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Text(
-//                         'Quality: ${item['quality']} | Size: ${item['fileSize']}',
-//                       ),
-//                       Text(
-//                         _formatDate(item['dateTime']),
-//                         style: const TextStyle(fontSize: 11),
-//                       ),
-//                     ],
-//                   ),
-//                   trailing: IconButton(
-//                     icon: const Icon(Icons.play_arrow, color: Colors.green),
-//                     onPressed: () => OpenFile.open(item['filePath']),
-//                   ),
-//                   onLongPress: () => _deleteItem(context, controller, item),
+//     return Scaffold(
+//       backgroundColor: Colors.black,
+//       body: Container(
+//         decoration: const BoxDecoration(
+//           image: DecorationImage(
+//             image: AssetImage('assets/images/BG.png'),
+//             fit: BoxFit.cover,
+//           ),
+//         ),
+//         child: Column(
+//           children: [
+//             AppBar(
+//               title: Text(
+//                 localizations?.historyTitle ?? 'Download History',
+//                 style: const TextStyle(color: Colors.white),
+//               ),
+//               backgroundColor: const Color.fromARGB(255, 34, 111, 226),
+//               elevation: 0,
+//               actions: [
+//                 Consumer<DownloadController>(
+//                   builder: (context, controller, child) {
+//                     if (controller.downloadHistory.isEmpty)
+//                       return const SizedBox();
+//                     return Row(
+//                       children: [
+//                         // Add refresh button
+//                         IconButton(
+//                           icon: const Icon(Icons.refresh, color: Colors.white),
+//                           onPressed: () async {
+//                             await controller.loadHistory();
+//                             ScaffoldMessenger.of(context).showSnackBar(
+//                               SnackBar(
+//                                 content: Text(localizations?.historyHint ?? 'History refreshed'),
+//                                 duration: const Duration(seconds: 1),
+//                               ),
+//                             );
+//                           },
+//                           tooltip: localizations?.history ?? 'Refresh History',
+//                         ),
+//                         IconButton(
+//                           icon: const Icon(Icons.delete_sweep, color: Colors.white),
+//                           onPressed: () => _clearAll(context, controller, localizations),
+//                         ),
+//                       ],
+//                     );
+//                   },
 //                 ),
-//               );
-//             },
-//           );
-//         },
+//               ],
+//             ),
+//             Expanded(
+//               child: Consumer<DownloadController>(
+//                 builder: (context, controller, child) {
+//                   final history = controller.downloadHistory;
+
+//                   if (history.isEmpty) {
+//                     return Center(
+//                       child: Column(
+//                         mainAxisAlignment: MainAxisAlignment.center,
+//                         children: [
+//                           Image.asset(
+//                             'assets/images/No_media_found.png',
+//                             height: 90,
+//                             width: 90,
+//                           ),
+//                           const SizedBox(height: 16),
+//                           Text(
+//                             localizations?.noDownloads ?? 'No downloads yet',
+//                             style: const TextStyle(color: Colors.white70),
+//                           ),
+//                           const SizedBox(height: 8),
+//                           Text(
+//                             localizations?.historyHint ?? 'Download videos from the browser',
+//                             style: const TextStyle(color: Colors.white60),
+//                           ),
+//                         ],
+//                       ),
+//                     );
+//                   }
+
+//                   return ListView.builder(
+//                     itemCount: history.length,
+//                     itemBuilder: (context, index) {
+//                       final item = history[index];
+//                       return Card(
+//                         margin: const EdgeInsets.all(8),
+//                         color: Colors.white,
+//                         elevation: 4,
+//                         shape: RoundedRectangleBorder(
+//                           borderRadius: BorderRadius.circular(12),
+//                         ),
+//                         child: ListTile(
+//                           leading: FutureBuilder<String?>(
+//                             future: _getThumbnail(item['filePath']),
+//                             builder: (context, snapshot) {
+//                               if (snapshot.connectionState ==
+//                                   ConnectionState.waiting) {
+//                                 return Container(
+//                                   width: 60,
+//                                   height: 60,
+//                                   decoration: BoxDecoration(
+//                                     borderRadius: BorderRadius.circular(8),
+//                                     color: Colors.grey[200],
+//                                   ),
+//                                   child: const Center(
+//                                     child: SizedBox(
+//                                       width: 20,
+//                                       height: 20,
+//                                       child: CircularProgressIndicator(
+//                                         strokeWidth: 2,
+//                                       ),
+//                                     ),
+//                                   ),
+//                                 );
+//                               }
+
+//                               if (snapshot.hasData && snapshot.data != null) {
+//                                 return ClipRRect(
+//                                   borderRadius: BorderRadius.circular(8),
+//                                   child: Image.file(
+//                                     File(snapshot.data!),
+//                                     width: 60,
+//                                     height: 60,
+//                                     fit: BoxFit.cover,
+//                                     errorBuilder: (context, error, stackTrace) {
+//                                       return Container(
+//                                         width: 60,
+//                                         height: 60,
+//                                         decoration: BoxDecoration(
+//                                           borderRadius: BorderRadius.circular(8),
+//                                           color: Colors.grey[200],
+//                                         ),
+//                                         child: const Icon(
+//                                           Icons.broken_image,
+//                                           color: Colors.grey,
+//                                         ),
+//                                       );
+//                                     },
+//                                   ),
+//                                 );
+//                               }
+
+//                               return Container(
+//                                 width: 60,
+//                                 height: 60,
+//                                 decoration: BoxDecoration(
+//                                   borderRadius: BorderRadius.circular(8),
+//                                   color: Colors.grey[200],
+//                                 ),
+//                                 child: const Icon(
+//                                   Icons.video_file,
+//                                   size: 30,
+//                                   color: Colors.grey,
+//                                 ),
+//                               );
+//                             },
+//                           ),
+//                           title: Text(
+//                             item['fileName'],
+//                             maxLines: 1,
+//                             style: const TextStyle(
+//                               color: Colors.black87,
+//                               fontWeight: FontWeight.w500,
+//                             ),
+//                           ),
+//                           subtitle: Column(
+//                             crossAxisAlignment: CrossAxisAlignment.start,
+//                             children: [
+//                               Text(
+//                                 '${localizations?.quality ?? 'Quality'}: ${item['quality']} | ${localizations?.small_size ?? 'Size'}: ${item['fileSize']}',
+//                                 style: const TextStyle(color: Colors.black54),
+//                               ),
+//                               Text(
+//                                 _formatDate(item['dateTime'], localizations),
+//                                 style: const TextStyle(
+//                                   fontSize: 11,
+//                                   color: Colors.black45,
+//                                 ),
+//                               ),
+//                             ],
+//                           ),
+//                           trailing: IconButton(
+//                             icon: const Icon(
+//                               Icons.play_arrow,
+//                               color: Colors.green,
+//                             ),
+//                             onPressed: () => OpenFile.open(item['filePath']),
+//                           ),
+//                           onLongPress: () =>
+//                               _deleteItem(context, controller, item, localizations),
+//                         ),
+//                       );
+//                     },
+//                   );
+//                 },
+//               ),
+//             ),
+//           ],
+//         ),
 //       ),
 //     );
 //   }
 
-//   String _formatDate(String dateTimeStr) {
-//     final dateTime = DateTime.parse(dateTimeStr);
-//     final now = DateTime.now();
-//     final diff = now.difference(dateTime);
+//   Future<String?> _getThumbnail(String videoPath) async {
+//     try {
+//       final tempDir = await getTemporaryDirectory();
+//       final thumbnail = await VideoThumbnail.thumbnailFile(
+//         video: videoPath,
+//         thumbnailPath: tempDir.path,
+//         imageFormat: ImageFormat.JPEG,
+//         quality: 75,
+//       );
+//       return thumbnail;
+//     } catch (e) {
+//       return null;
+//     }
+//   }
 
-//     if (diff.inDays > 0) return '${diff.inDays}d ago';
-//     if (diff.inHours > 0) return '${diff.inHours}h ago';
-//     if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-//     return 'Just now';
+//   String _formatDate(String dateTimeStr, AppLocalizations? localizations) {
+//     try {
+//       final dateTime = DateTime.parse(dateTimeStr);
+//       final now = DateTime.now();
+//       final diff = now.difference(dateTime);
+
+//       if (diff.inDays > 7) {
+//         return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+//       } else if (diff.inDays > 0) {
+//         return '${diff.inDays} ${localizations?.day ?? 'day'}${diff.inDays > 1 ? (localizations?.days ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+//       } else if (diff.inHours > 0) {
+//         return '${diff.inHours} ${localizations?.hour ?? 'hour'}${diff.inHours > 1 ? (localizations?.hours ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+//       } else if (diff.inMinutes > 0) {
+//         return '${diff.inMinutes} ${localizations?.minute ?? 'minute'}${diff.inMinutes > 1 ? (localizations?.minutes ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+//       } else {
+//         return localizations?.just_now ?? 'Just now';
+//       }
+//     } catch (e) {
+//       return localizations?.unknown_date ?? 'Unknown date';
+//     }
 //   }
 
 //   void _deleteItem(
 //     BuildContext context,
 //     DownloadController controller,
 //     Map<String, dynamic> item,
+//     AppLocalizations? localizations,
 //   ) {
 //     showDialog(
 //       context: context,
 //       builder: (context) => AlertDialog(
-//         title: const Text('Delete Video'),
-//         content: Text('Delete "${item['fileName']}"?'),
+//         title: Text(localizations?.delete_video ?? 'Delete Video'),
+//         content: Text('${localizations?.delete_video_confirm ?? 'Delete'} "${item['fileName']}"?'),
 //         actions: [
 //           TextButton(
 //             onPressed: () => Navigator.pop(context),
-//             child: const Text('Cancel'),
+//             child: Text(localizations?.cancel ?? 'Cancel'),
 //           ),
 //           TextButton(
-//             onPressed: () {
-//               controller.deleteHistoryItem(item['id'], item['filePath']);
+//             onPressed: () async {
+//               await controller.deleteHistoryItem(item['id'], item['filePath']);
 //               Navigator.pop(context);
+//               ScaffoldMessenger.of(context).showSnackBar(
+//                 SnackBar(content: Text('${item['fileName']} ${localizations?.deleted ?? 'deleted'}')),
+//               );
 //             },
-//             child: const Text('Delete', style: TextStyle(color: Colors.red)),
+//             child: Text(
+//               localizations?.delete ?? 'Delete',
+//               style: const TextStyle(color: Colors.red),
+//             ),
 //           ),
 //         ],
 //       ),
 //     );
 //   }
 
-//   void _clearAll(BuildContext context, DownloadController controller) {
+//   void _clearAll(BuildContext context, DownloadController controller, AppLocalizations? localizations) {
 //     showDialog(
 //       context: context,
 //       builder: (context) => AlertDialog(
-//         title: const Text('Clear All'),
-//         content: const Text('Delete all downloaded videos?'),
+//         title: Text(localizations?.clear_all ?? 'Clear All'),
+//         content: Text(localizations?.clear_all_confirm ?? 'Delete all downloaded videos?'),
 //         actions: [
 //           TextButton(
 //             onPressed: () => Navigator.pop(context),
-//             child: const Text('Cancel'),
+//             child: Text(localizations?.cancel ?? 'Cancel'),
 //           ),
 //           TextButton(
-//             onPressed: () {
-//               controller.clearAllHistory();
+//             onPressed: () async {
+//               await controller.clearAllHistory();
 //               Navigator.pop(context);
+//               ScaffoldMessenger.of(context).showSnackBar(
+//                 SnackBar(content: Text(localizations?.all_videos_deleted ?? 'All videos deleted')),
+//               );
 //             },
-//             child: const Text(
-//               'Delete All',
-//               style: TextStyle(color: Colors.red),
+//             child: Text(
+//               localizations?.delete_all ?? 'Delete All',
+//               style: const TextStyle(color: Colors.red),
 //             ),
 //           ),
 //         ],
@@ -142,9 +317,429 @@
 //   }
 // }
 
-//workingggggggggggggg
+// import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
+// import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
+// import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
+// import 'package:facebook_video_downloader/features/webview/webview_screen.dart';
+// import 'package:facebook_video_downloader/l10n/app_localizations.dart';
+// import 'package:flutter/material.dart';
+// import 'package:provider/provider.dart';
+// import 'package:open_file/open_file.dart';
+// import 'package:video_thumbnail/video_thumbnail.dart';
+// import 'package:path_provider/path_provider.dart';
+// import 'dart:io';
 
+// class HistoryScreen extends StatelessWidget {
+//   const HistoryScreen({super.key});
+
+//   void _navigateToWebView(BuildContext context, {required String url}) {
+//     Navigator.push(
+//       context,
+//       MaterialPageRoute(builder: (context) => WebViewScreen(url: url)),
+//     );
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final localizations = AppLocalizations.of(context);
+
+//     return Scaffold(
+//       backgroundColor: Colors.black,
+//       appBar: AppBar(
+//         backgroundColor: const Color(0xFF0066ff),
+//         title: Align(
+//           alignment: Alignment.centerLeft,
+//           child: Text(
+//             localizations?.appTitle ?? 'Video Downloader',
+//             style: const TextStyle(
+//               color: Colors.white,
+//               fontWeight: FontWeight.bold,
+//               fontSize: 18,
+//             ),
+//           ),
+//         ),
+//         centerTitle: true,
+//         elevation: 0,
+//         actions: [
+//           // Refresh button
+//           Consumer<DownloadController>(
+//             builder: (context, controller, child) {
+//               if (controller.downloadHistory.isEmpty) return const SizedBox();
+//               return IconButton(
+//                 icon: const Icon(Icons.refresh, color: Colors.white),
+//                 onPressed: () async {
+//                   await controller.loadHistory();
+//                   ScaffoldMessenger.of(context).showSnackBar(
+//                     SnackBar(
+//                       content: Text(
+//                         localizations?.historyHint ?? 'History refreshed',
+//                       ),
+//                       duration: const Duration(seconds: 1),
+//                     ),
+//                   );
+//                 },
+//                 tooltip: localizations?.history ?? 'Refresh History',
+//               );
+//             },
+//           ),
+//           // Clear all button
+//           Consumer<DownloadController>(
+//             builder: (context, controller, child) {
+//               if (controller.downloadHistory.isEmpty) return const SizedBox();
+//               return IconButton(
+//                 icon: const Icon(Icons.delete_sweep, color: Colors.white),
+//                 onPressed: () => _clearAll(context, controller, localizations),
+//               );
+//             },
+//           ),
+//           // Premium Crown Button
+//           const SizedBox(width: 4),
+//           SizedBox(
+//             width: 40,
+//             height: 40,
+//             child: IconButton(
+//               padding: EdgeInsets.zero,
+//               icon: Image.asset(
+//                 'assets/images/Crown.png',
+//                 width: 35,
+//                 height: 35,
+//                 errorBuilder: (_, __, ___) =>
+//                     const Icon(Icons.star, color: Colors.white, size: 22),
+//               ),
+//               onPressed: () {
+//                 Navigator.push(
+//                   context,
+//                   MaterialPageRoute(
+//                     builder: (context) => const PremiumScreen(),
+//                   ),
+//                 );
+//               },
+//               tooltip: localizations?.premium ?? 'Premium',
+//             ),
+//           ),
+//           // Facebook Button
+//           SizedBox(
+//             width: 40,
+//             height: 40,
+//             child: IconButton(
+//               padding: EdgeInsets.zero,
+//               icon: Image.asset(
+//                 'assets/images/Facebookicon.png',
+//                 width: 22,
+//                 height: 22,
+//                 errorBuilder: (_, __, ___) =>
+//                     const Icon(Icons.facebook, color: Colors.white, size: 22),
+//               ),
+//               onPressed: () {
+//                 _navigateToWebView(context, url: 'https://www.facebook.com');
+//               },
+//               tooltip: localizations?.facebook ?? 'Facebook',
+//             ),
+//           ),
+//           // Settings Button
+//           SizedBox(
+//             width: 40,
+//             height: 40,
+//             child: IconButton(
+//               padding: EdgeInsets.zero,
+//               icon: Image.asset(
+//                 'assets/images/Settingicon.png',
+//                 width: 30,
+//                 height: 30,
+//                 errorBuilder: (_, __, ___) =>
+//                     const Icon(Icons.settings, color: Colors.white, size: 22),
+//               ),
+//               onPressed: () {
+//                 Navigator.push(
+//                   context,
+//                   MaterialPageRoute(
+//                     builder: (context) => const SettingsScreen(),
+//                   ),
+//                 );
+//               },
+//               tooltip: localizations?.settings ?? 'Settings',
+//             ),
+//           ),
+//           const SizedBox(width: 8),
+//         ],
+//       ),
+//       body: Container(
+//         decoration: const BoxDecoration(
+//           image: DecorationImage(
+//             image: AssetImage('assets/images/BG.png'),
+//             fit: BoxFit.cover,
+//           ),
+//         ),
+//         child: Consumer<DownloadController>(
+//           builder: (context, controller, child) {
+//             final history = controller.downloadHistory;
+
+//             if (history.isEmpty) {
+//               return Center(
+//                 child: Column(
+//                   mainAxisAlignment: MainAxisAlignment.center,
+//                   children: [
+//                     Image.asset(
+//                       'assets/images/No_media_found.png',
+//                       height: 90,
+//                       width: 90,
+//                     ),
+//                     const SizedBox(height: 16),
+//                     Text(
+//                       localizations?.noDownloads ?? 'No downloads yet',
+//                       style: const TextStyle(color: Colors.white70),
+//                     ),
+//                     const SizedBox(height: 8),
+//                     Text(
+//                       localizations?.historyHint ??
+//                           'Download videos from the browser',
+//                       style: const TextStyle(color: Colors.white60),
+//                     ),
+//                   ],
+//                 ),
+//               );
+//             }
+
+//             return ListView.builder(
+//               itemCount: history.length,
+//               itemBuilder: (context, index) {
+//                 final item = history[index];
+//                 return Card(
+//                   margin: const EdgeInsets.all(8),
+//                   color: Colors.white,
+//                   elevation: 4,
+//                   shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(12),
+//                   ),
+//                   child: ListTile(
+//                     leading: FutureBuilder<String?>(
+//                       future: _getThumbnail(item['filePath']),
+//                       builder: (context, snapshot) {
+//                         if (snapshot.connectionState ==
+//                             ConnectionState.waiting) {
+//                           return Container(
+//                             width: 60,
+//                             height: 60,
+//                             decoration: BoxDecoration(
+//                               borderRadius: BorderRadius.circular(8),
+//                               color: Colors.grey[200],
+//                             ),
+//                             child: const Center(
+//                               child: SizedBox(
+//                                 width: 20,
+//                                 height: 20,
+//                                 child: CircularProgressIndicator(
+//                                   strokeWidth: 2,
+//                                 ),
+//                               ),
+//                             ),
+//                           );
+//                         }
+
+//                         if (snapshot.hasData && snapshot.data != null) {
+//                           return ClipRRect(
+//                             borderRadius: BorderRadius.circular(8),
+//                             child: Image.file(
+//                               File(snapshot.data!),
+//                               width: 60,
+//                               height: 60,
+//                               fit: BoxFit.cover,
+//                               errorBuilder: (context, error, stackTrace) {
+//                                 return Container(
+//                                   width: 60,
+//                                   height: 60,
+//                                   decoration: BoxDecoration(
+//                                     borderRadius: BorderRadius.circular(8),
+//                                     color: Colors.grey[200],
+//                                   ),
+//                                   child: const Icon(
+//                                     Icons.broken_image,
+//                                     color: Colors.grey,
+//                                   ),
+//                                 );
+//                               },
+//                             ),
+//                           );
+//                         }
+
+//                         return Container(
+//                           width: 60,
+//                           height: 60,
+//                           decoration: BoxDecoration(
+//                             borderRadius: BorderRadius.circular(8),
+//                             color: Colors.grey[200],
+//                           ),
+//                           child: const Icon(
+//                             Icons.video_file,
+//                             size: 30,
+//                             color: Colors.grey,
+//                           ),
+//                         );
+//                       },
+//                     ),
+//                     title: Text(
+//                       item['fileName'],
+//                       maxLines: 1,
+//                       style: const TextStyle(
+//                         color: Colors.black87,
+//                         fontWeight: FontWeight.w500,
+//                       ),
+//                     ),
+//                     subtitle: Column(
+//                       crossAxisAlignment: CrossAxisAlignment.start,
+//                       children: [
+//                         Text(
+//                           '${localizations?.quality ?? 'Quality'}: ${item['quality']} | ${localizations?.small_size ?? 'Size'}: ${item['fileSize']}',
+//                           style: const TextStyle(color: Colors.black54),
+//                         ),
+//                         Text(
+//                           _formatDate(item['dateTime'], localizations),
+//                           style: const TextStyle(
+//                             fontSize: 11,
+//                             color: Colors.black45,
+//                           ),
+//                         ),
+//                       ],
+//                     ),
+//                     trailing: IconButton(
+//                       icon: const Icon(Icons.play_arrow, color: Colors.green),
+//                       onPressed: () => OpenFile.open(item['filePath']),
+//                     ),
+//                     onLongPress: () =>
+//                         _deleteItem(context, controller, item, localizations),
+//                   ),
+//                 );
+//               },
+//             );
+//           },
+//         ),
+//       ),
+//     );
+//   }
+
+//   Future<String?> _getThumbnail(String videoPath) async {
+//     try {
+//       final tempDir = await getTemporaryDirectory();
+//       final thumbnail = await VideoThumbnail.thumbnailFile(
+//         video: videoPath,
+//         thumbnailPath: tempDir.path,
+//         imageFormat: ImageFormat.JPEG,
+//         quality: 75,
+//       );
+//       return thumbnail;
+//     } catch (e) {
+//       return null;
+//     }
+//   }
+
+//   String _formatDate(String dateTimeStr, AppLocalizations? localizations) {
+//     try {
+//       final dateTime = DateTime.parse(dateTimeStr);
+//       final now = DateTime.now();
+//       final diff = now.difference(dateTime);
+
+//       if (diff.inDays > 7) {
+//         return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+//       } else if (diff.inDays > 0) {
+//         return '${diff.inDays} ${localizations?.day ?? 'day'}${diff.inDays > 1 ? (localizations?.days ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+//       } else if (diff.inHours > 0) {
+//         return '${diff.inHours} ${localizations?.hour ?? 'hour'}${diff.inHours > 1 ? (localizations?.hours ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+//       } else if (diff.inMinutes > 0) {
+//         return '${diff.inMinutes} ${localizations?.minute ?? 'minute'}${diff.inMinutes > 1 ? (localizations?.minutes ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+//       } else {
+//         return localizations?.just_now ?? 'Just now';
+//       }
+//     } catch (e) {
+//       return localizations?.unknown_date ?? 'Unknown date';
+//     }
+//   }
+
+//   void _deleteItem(
+//     BuildContext context,
+//     DownloadController controller,
+//     Map<String, dynamic> item,
+//     AppLocalizations? localizations,
+//   ) {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: Text(localizations?.delete_video ?? 'Delete Video'),
+//         content: Text(
+//           '${localizations?.delete_video_confirm ?? 'Delete'} "${item['fileName']}"?',
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: Text(localizations?.cancel ?? 'Cancel'),
+//           ),
+//           TextButton(
+//             onPressed: () async {
+//               await controller.deleteHistoryItem(item['id'], item['filePath']);
+//               Navigator.pop(context);
+//               ScaffoldMessenger.of(context).showSnackBar(
+//                 SnackBar(
+//                   content: Text(
+//                     '${item['fileName']} ${localizations?.deleted ?? 'deleted'}',
+//                   ),
+//                 ),
+//               );
+//             },
+//             child: Text(
+//               localizations?.delete ?? 'Delete',
+//               style: const TextStyle(color: Colors.red),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   void _clearAll(
+//     BuildContext context,
+//     DownloadController controller,
+//     AppLocalizations? localizations,
+//   ) {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: Text(localizations?.clear_all ?? 'Clear All'),
+//         content: Text(
+//           localizations?.clear_all_confirm ?? 'Delete all downloaded videos?',
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: Text(localizations?.cancel ?? 'Cancel'),
+//           ),
+//           TextButton(
+//             onPressed: () async {
+//               await controller.clearAllHistory();
+//               Navigator.pop(context);
+//               ScaffoldMessenger.of(context).showSnackBar(
+//                 SnackBar(
+//                   content: Text(
+//                     localizations?.all_videos_deleted ?? 'All videos deleted',
+//                   ),
+//                 ),
+//               );
+//             },
+//             child: Text(
+//               localizations?.delete_all ?? 'Delete All',
+//               style: const TextStyle(color: Colors.red),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+//workinggggggggggggggggggggggggggggggggggggggggggggggggggggggddddddddddddddddddddddgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
+
+import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
+import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
+import 'package:facebook_video_downloader/features/webview/webview_screen.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:open_file/open_file.dart';
@@ -152,95 +747,406 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  // Track items that are being deleted to prevent multiple deletions
+  final Set<int> _deletingItems = {};
+
+  void _navigateToWebView(BuildContext context, {required String url}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WebViewScreen(url: url),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Download History'),
-        actions: [
-          Consumer<DownloadController>(
-            builder: (context, controller, child) {
-              if (controller.downloadHistory.isEmpty) return const SizedBox();
-              return IconButton(
-                icon: const Icon(Icons.delete_sweep),
-                onPressed: () => _clearAll(context, controller),
-              );
-            },
+        backgroundColor: const Color(0xFF0066ff),
+        leading: IconButton(
+          // ADD THIS
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            localizations?.appTitle ?? 'Video Downloader',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        actions: [
+          // Premium Crown Button
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Image.asset(
+                'assets/images/Crown.png',
+                width: 35,
+                height: 35,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.star, color: Colors.white, size: 22),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PremiumScreen(),
+                  ),
+                );
+              },
+              tooltip: localizations?.premium ?? 'Premium',
+            ),
+          ),
+          // Facebook Button
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Image.asset(
+                'assets/images/Facebookicon.png',
+                width: 22,
+                height: 22,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.facebook, color: Colors.white, size: 22),
+              ),
+              onPressed: () {
+                _navigateToWebView(context, url: 'https://www.facebook.com');
+              },
+              tooltip: localizations?.facebook ?? 'Facebook',
+            ),
+          ),
+          // Settings Button
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Image.asset(
+                'assets/images/Settingicon.png',
+                width: 30,
+                height: 30,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.settings, color: Colors.white, size: 22),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              },
+              tooltip: localizations?.settings ?? 'Settings',
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Consumer<DownloadController>(
-        builder: (context, controller, child) {
-          if (controller.downloadHistory.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.video_library, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text('No downloads yet'),
-                  SizedBox(height: 8),
-                  Text('Download videos from the browser'),
-                ],
-              ),
-            );
-          }
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/BG.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: Consumer<DownloadController>(
+          builder: (context, controller, child) {
+            final history = controller.downloadHistory;
 
-          return ListView.builder(
-            itemCount: controller.downloadHistory.length,
-            itemBuilder: (context, index) {
-              final item = controller.downloadHistory[index];
-              return Card(
-                margin: const EdgeInsets.all(8),
-                child: ListTile(
-                  leading: FutureBuilder<String?>(
-                    future: _getThumbnail(item['filePath']),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Icon(Icons.video_file, size: 40);
-                      }
-
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            File(snapshot.data!),
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          ),
-                        );
-                      }
-
-                      return const Icon(Icons.video_file, size: 40);
-                    },
-                  ),
-                  title: Text(item['fileName'], maxLines: 1),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quality: ${item['quality']} | Size: ${item['fileSize']}',
-                      ),
-                      Text(
-                        _formatDate(item['dateTime']),
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.play_arrow, color: Colors.green),
-                    onPressed: () => OpenFile.open(item['filePath']),
-                  ),
-                  onLongPress: () => _deleteItem(context, controller, item),
+            if (history.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/images/No_media_found.png',
+                      height: 90,
+                      width: 90,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      localizations?.noDownloads ?? 'No downloads yet',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      localizations?.historyHint ??
+                          'Download videos from the browser',
+                      style: const TextStyle(color: Colors.white60),
+                    ),
+                  ],
                 ),
               );
-            },
-          );
-        },
+            }
+
+            return Column(
+              children: [
+                // Refresh Button outside AppBar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      onPressed: () async {
+                        await controller.loadHistory();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              localizations?.historyHint ?? 'History refreshed',
+                            ),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      tooltip: localizations?.history ?? 'Refresh History',
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: history.length,
+                    itemBuilder: (context, index) {
+                      final item = history[index];
+                      final itemId = item['id'] as int;
+
+                      // Don't show if it's currently being deleted
+                      if (_deletingItems.contains(itemId)) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Dismissible(
+                        key: Key(itemId.toString()),
+                        direction: DismissDirection.horizontal,
+                        confirmDismiss: (direction) async {
+                          // Show popup and wait for user decision
+                          final shouldDelete =
+                              await _showDeleteConfirmationDialog(
+                                context,
+                                item,
+                                localizations,
+                              );
+
+                          if (shouldDelete == true) {
+                            // Actually delete
+                            setState(() {
+                              _deletingItems.add(itemId);
+                            });
+                            await controller.deleteHistoryItem(
+                              item['id'],
+                              item['filePath'],
+                            );
+                            setState(() {
+                              _deletingItems.remove(itemId);
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${item['fileName']} ${localizations?.deleted ?? 'deleted'}',
+                                ),
+                              ),
+                            );
+                          }
+
+                          return shouldDelete;
+                        },
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.only(left: 20),
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        secondaryBackground: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        child: Card(
+                          margin: const EdgeInsets.all(8),
+                          color: Colors.white,
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            leading: FutureBuilder<String?>(
+                              future: _getThumbnail(item['filePath']),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  return Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.grey[200],
+                                    ),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(snapshot.data!),
+                                      width: 60,
+                                      height: 60,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Container(
+                                              width: 60,
+                                              height: 60,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                                color: Colors.grey[200],
+                                              ),
+                                              child: const Icon(
+                                                Icons.broken_image,
+                                                color: Colors.grey,
+                                              ),
+                                            );
+                                          },
+                                    ),
+                                  );
+                                }
+
+                                return Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.grey[200],
+                                  ),
+                                  child: const Icon(
+                                    Icons.video_file,
+                                    size: 30,
+                                    color: Colors.grey,
+                                  ),
+                                );
+                              },
+                            ),
+                            title: Text(
+                              item['fileName'],
+                              maxLines: 1,
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${localizations?.quality ?? 'Quality'}: ${item['quality']} | ${localizations?.small_size ?? 'Size'}: ${item['fileSize']}',
+                                  style: const TextStyle(color: Colors.black54),
+                                ),
+                                Text(
+                                  _formatDate(item['dateTime'], localizations),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black45,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.play_arrow,
+                                color: Color.fromARGB(255, 48, 172, 85),
+                              ),
+                              onPressed: () => OpenFile.open(item['filePath']),
+                            ),
+                            onLongPress: () => _deleteItem(
+                              context,
+                              controller,
+                              item,
+                              localizations,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _showDeleteConfirmationDialog(
+    BuildContext context,
+    Map<String, dynamic> item,
+    AppLocalizations? localizations,
+  ) async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(localizations?.delete_video ?? 'Delete Video'),
+        content: Text(
+          '${localizations?.delete_video_confirm ?? 'Delete'} "${item['fileName']}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(localizations?.cancel ?? 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              localizations?.delete ?? 'Delete',
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -260,63 +1166,61 @@ class HistoryScreen extends StatelessWidget {
     }
   }
 
-  String _formatDate(String dateTimeStr) {
-    final dateTime = DateTime.parse(dateTimeStr);
-    final now = DateTime.now();
-    final diff = now.difference(dateTime);
+  String _formatDate(String dateTimeStr, AppLocalizations? localizations) {
+    try {
+      final dateTime = DateTime.parse(dateTimeStr);
+      final now = DateTime.now();
+      final diff = now.difference(dateTime);
 
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return 'Just now';
+      if (diff.inDays > 7) {
+        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      } else if (diff.inDays > 0) {
+        return '${diff.inDays} ${localizations?.day ?? 'day'}${diff.inDays > 1 ? (localizations?.days ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+      } else if (diff.inHours > 0) {
+        return '${diff.inHours} ${localizations?.hour ?? 'hour'}${diff.inHours > 1 ? (localizations?.hours ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+      } else if (diff.inMinutes > 0) {
+        return '${diff.inMinutes} ${localizations?.minute ?? 'minute'}${diff.inMinutes > 1 ? (localizations?.minutes ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+      } else {
+        return localizations?.just_now ?? 'Just now';
+      }
+    } catch (e) {
+      return localizations?.unknown_date ?? 'Unknown date';
+    }
   }
 
   void _deleteItem(
     BuildContext context,
     DownloadController controller,
     Map<String, dynamic> item,
+    AppLocalizations? localizations,
   ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Video'),
-        content: Text('Delete "${item['fileName']}"?'),
+        title: Text(localizations?.delete_video ?? 'Delete Video'),
+        content: Text(
+          '${localizations?.delete_video_confirm ?? 'Delete'} "${item['fileName']}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(localizations?.cancel ?? 'Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              controller.deleteHistoryItem(item['id'], item['filePath']);
+            onPressed: () async {
+              await controller.deleteHistoryItem(item['id'], item['filePath']);
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${item['fileName']} ${localizations?.deleted ?? 'deleted'}',
+                  ),
+                ),
+              );
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _clearAll(BuildContext context, DownloadController controller) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All'),
-        content: const Text('Delete all downloaded videos?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              controller.clearAllHistory();
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Delete All',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              localizations?.delete ?? 'Delete',
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],

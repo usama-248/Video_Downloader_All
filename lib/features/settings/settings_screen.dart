@@ -1,385 +1,187 @@
-// import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
-// import 'package:facebook_video_downloader/features/settings/language_screen.dart';
-// import 'package:facebook_video_downloader/l10n/app_localizations.dart';
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
+// ignore_for_file: unused_element
 
-// class SettingsScreen extends StatelessWidget {
-//   const SettingsScreen({Key? key}) : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final l10n = AppLocalizations.of(context)!;
-
-//     return Scaffold(
-//       backgroundColor: Colors.white,
-//       appBar: AppBar(
-//         backgroundColor: Colors.white,
-//         title: Text(
-//           l10n.settings,
-//           style: const TextStyle(
-//             color: Colors.black87,
-//             fontWeight: FontWeight.bold,
-//             fontSize: 20,
-//           ),
-//         ),
-//         centerTitle: true,
-//         elevation: 0,
-//         leading: IconButton(
-//           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-//           onPressed: () => Navigator.pop(context),
-//         ),
-//       ),
-//       body: SingleChildScrollView(
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             // Top Features Section
-//             _buildSectionHeader(l10n.topFeatures),
-//             _buildFeatureTile(
-//               icon: Icons.download,
-//               iconColor: Colors.blue,
-//               title: l10n.downloadVideo,
-//               subtitle: l10n.downloadSubtitle,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   SnackBar(content: Text('${l10n.downloadVideo}...')),
-//                 );
-//               },
-//             ),
-//             _buildFeatureTile(
-//               icon: Icons.play_circle_filled,
-//               iconColor: Colors.red,
-//               title: l10n.watchVideo,
-//               subtitle: l10n.watchSubtitle,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   SnackBar(content: Text('${l10n.watchVideo}...')),
-//                 );
-//               },
-//             ),
-//             _buildFeatureTile(
-//               icon: Icons.folder_open,
-//               iconColor: Colors.green,
-//               title: l10n.savedVideos,
-//               subtitle: l10n.savedSubtitle,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   SnackBar(content: Text('${l10n.savedVideos}...')),
-//                 );
-//               },
-//             ),
-//             _buildFeatureTile(
-//               icon: Icons.language,
-//               iconColor: Colors.purple,
-//               title: l10n.languages,
-//               subtitle: l10n.languagesSubtitle,
-//               onTap: () {
-//                 // Navigate to Language Screen instead of showing dialog
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(builder: (context) => const LanguageScreen()),
-//                 );
-//               },
-//             ),
-
-//             const SizedBox(height: 16),
-
-//             // Communications Section
-//             _buildSectionHeader(l10n.communications),
-//             _buildFeatureTile(
-//               icon: Icons.share,
-//               iconColor: Colors.orange,
-//               title: l10n.shareApp,
-//               subtitle: l10n.shareSubtitle,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   SnackBar(content: Text('${l10n.shareApp}...')),
-//                 );
-//               },
-//             ),
-//             _buildFeatureTile(
-//               icon: Icons.privacy_tip,
-//               iconColor: Colors.teal,
-//               title: l10n.privacyPolicy,
-//               subtitle: l10n.privacySubtitle,
-//               onTap: () {
-//                 ScaffoldMessenger.of(context).showSnackBar(
-//                   SnackBar(content: Text('${l10n.privacyPolicy}...')),
-//                 );
-//               },
-//             ),
-//             _buildFeatureTile(
-//               icon: Icons.subscriptions,
-//               iconColor: Colors.deepPurple,
-//               title: l10n.manageSubscription,
-//               subtitle: l10n.subscriptionSubtitle,
-//               onTap: () {
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(builder: (context) => const PremiumScreen()),
-//                 );
-//               },
-//             ),
-//             _buildFeatureTile(
-//               icon: Icons.copyright,
-//               iconColor: Colors.grey,
-//               title: l10n.disclaimer,
-//               subtitle: l10n.disclaimerSubtitle,
-//               onTap: () {
-//                 _showDisclaimerDialog(context);
-//               },
-//             ),
-
-//             const SizedBox(height: 30),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildSectionHeader(String title) {
-//     return Padding(
-//       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-//       child: Text(
-//         title,
-//         style: const TextStyle(
-//           fontSize: 16,
-//           fontWeight: FontWeight.bold,
-//           color: Colors.black87,
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _buildFeatureTile({
-//     required IconData icon,
-//     required Color iconColor,
-//     required String title,
-//     required String subtitle,
-//     required VoidCallback onTap,
-//   }) {
-//     return ListTile(
-//       leading: Container(
-//         width: 45,
-//         height: 45,
-//         decoration: BoxDecoration(
-//           color: iconColor.withOpacity(0.1),
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//         child: Icon(
-//           icon,
-//           color: iconColor,
-//           size: 24,
-//         ),
-//       ),
-//       title: Text(
-//         title,
-//         style: const TextStyle(
-//           fontSize: 15,
-//           fontWeight: FontWeight.w600,
-//           color: Colors.black87,
-//         ),
-//       ),
-//       subtitle: Text(
-//         subtitle,
-//         style: TextStyle(
-//           fontSize: 13,
-//           color: Colors.grey[600],
-//         ),
-//       ),
-//       trailing: const Icon(
-//         Icons.chevron_right,
-//         color: Colors.grey,
-//       ),
-//       onTap: onTap,
-//       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-//     );
-//   }
-
-//   void _showDisclaimerDialog(BuildContext context) {
-//     final l10n = AppLocalizations.of(context)!;
-
-//     showDialog(
-//       context: context,
-//       builder: (BuildContext context) {
-//         return AlertDialog(
-//           title: Text(l10n.disclaimerTitle),
-//           content: Text(l10n.disclaimerContent),
-//           actions: [
-//             TextButton(
-//               onPressed: () {
-//                 Navigator.pop(context);
-//               },
-//               child: Text(l10n.ok),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-// }
-
-// features/settings/settings_screen.dart
-import 'dart:io';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:async';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Text(
-          l10n.settings,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+        backgroundColor: const Color.fromARGB(255, 34, 111, 226),
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            l10n?.settings ?? 'Settings',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
         ),
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Features Section
-            _buildSectionHeader(l10n.topFeatures),
-            _buildFeatureTile(
-              icon: Icons.download,
-              iconColor: Colors.blue,
-              title: l10n.downloadVideo,
-              subtitle: l10n.downloadSubtitle,
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${l10n.downloadVideo} - Use the browser to download videos',
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/BG.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Features Section
+              _buildSectionHeader(l10n?.topFeatures ?? 'Top Features'),
+              _buildFeatureTile(
+                icon: Icons.download,
+                iconColor: Colors.blue,
+                title: l10n?.downloadVideo ?? 'Download Video',
+                subtitle:
+                    l10n?.downloadSubtitle ?? 'Download your favourite files',
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${l10n?.downloadVideo ?? 'Download Video'} - Use the browser to download videos',
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            _buildFeatureTile(
-              icon: Icons.play_circle_filled,
-              iconColor: Colors.red,
-              title: l10n.watchVideo,
-              subtitle: l10n.watchSubtitle,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const HistoryScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildFeatureTile(
-              icon: Icons.folder_open,
-              iconColor: Colors.green,
-              title: l10n.savedVideos,
-              subtitle: l10n.savedSubtitle,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const HistoryScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildFeatureTile(
-              icon: Icons.language,
-              iconColor: Colors.purple,
-              title: l10n.languages,
-              subtitle: l10n.languagesSubtitle,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LanguageScreen(),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
+              _buildFeatureTile(
+                icon: Icons.facebook,
+                iconColor: const Color(0xFF0066ff),
+                title: l10n?.watchVideo ?? 'Watch Video',
+                subtitle:
+                    l10n?.watchSubtitle ?? 'Watch videos directly on Facebook',
+                onTap: () => _launchFacebook(context),
+              ),
+              _buildFeatureTile(
+                icon: Icons.folder_open,
+                iconColor: Colors.green,
+                title: l10n?.savedVideos ?? 'Saved videos',
+                subtitle: l10n?.savedSubtitle ?? 'Open Downloaded Videos',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                  );
+                },
+              ),
+              _buildFeatureTileWithImage(
+                imagePath: 'assets/images/Language.png',
+                title: l10n?.languages ?? 'Languages',
+                subtitle: l10n?.languagesSubtitle ?? 'Change your languages',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LanguageScreen()),
+                  );
+                },
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Communications Section
-            _buildSectionHeader(l10n.communications),
-            _buildFeatureTile(
-              icon: Icons.share,
-              iconColor: Colors.orange,
-              title: l10n.shareApp,
-              subtitle: 'Share app APK with friends',
-              onTap: () => _showShareOptions(context),
-            ),
-            _buildFeatureTile(
-              icon: Icons.privacy_tip,
-              iconColor: Colors.teal,
-              title: l10n.privacyPolicy,
-              subtitle: l10n.privacySubtitle,
-              onTap: () => _launchPrivacyPolicy(context),
-            ),
-            _buildFeatureTile(
-              icon: Icons.subscriptions,
-              iconColor: Colors.deepPurple,
-              title: l10n.manageSubscription,
-              subtitle: l10n.subscriptionSubtitle,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildFeatureTile(
-              icon: Icons.copyright,
-              iconColor: Colors.grey,
-              title: l10n.disclaimer,
-              subtitle: l10n.disclaimerSubtitle,
-              onTap: () {
-                _showDisclaimerDialog(context);
-              },
-            ),
-            _buildFeatureTile(
-              icon: Icons.info_outline,
-              iconColor: Colors.blueGrey,
-              title: 'About App',
-              subtitle: 'Version 1.0.0',
-              onTap: () => _showAboutDialog(context),
-            ),
+              // Communications Section
+              _buildSectionHeader(l10n?.communications ?? 'Communications'),
 
-            const SizedBox(height: 30),
-          ],
+              _buildFeatureTile(
+                icon: Icons.subscriptions,
+                iconColor: Colors.deepPurple,
+                title: l10n?.manageSubscription ?? 'Manage Subscription',
+                subtitle:
+                    l10n?.subscriptionSubtitle ?? 'Manage your Subscription',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                  );
+                },
+              ),
+              _buildFeatureTile(
+                icon: Icons.star_rate_rounded,
+                iconColor: Colors.amber,
+                title: l10n?.giveUsReview ?? 'Give Us Review',
+                subtitle:
+                    l10n?.supportUsWithReview ??
+                    'Support us with your valuable review',
+                onTap: () => _launchReview(context),
+              ),
+              _buildFeatureTile(
+                icon: Icons.apps_rounded,
+                iconColor: Colors.purple,
+                title: l10n?.moreApps ?? 'More Apps',
+                subtitle:
+                    l10n?.discoverOurApps ?? 'Discover our other applications',
+                onTap: () => _launchMoreApps(context),
+              ),
+
+              _buildFeatureTile(
+                icon: Icons.share,
+                iconColor: Colors.orange,
+                title: l10n?.shareApp ?? 'Share App',
+                subtitle:
+                    l10n?.shareSubtitle ?? 'Share Video Downloader with others',
+                onTap: () => _showShareOptions(context, l10n),
+              ),
+
+              _buildFeatureTile(
+                icon: Icons.description_outlined,
+                iconColor: Colors.indigo,
+                title: l10n?.termsOfUse ?? 'Terms of Use',
+                subtitle:
+                    l10n?.readTermsConditions ?? 'Read our Terms & Conditions',
+                onTap: () => _launchTermsOfUse(context),
+              ),
+
+              _buildFeatureTile(
+                icon: Icons.privacy_tip,
+                iconColor: Colors.teal,
+                title: l10n?.privacyPolicy ?? 'Privacy Policy',
+                subtitle: l10n?.privacySubtitle ?? 'Open app privacy policy',
+                onTap: () => _launchPrivacyPolicy(context),
+              ),
+
+              _buildFeatureTile(
+                icon: Icons.copyright,
+                iconColor: Colors.grey,
+                title: l10n?.disclaimer ?? 'Disclaimer',
+                subtitle:
+                    l10n?.disclaimerSubtitle ??
+                    'Contents are protected by copyright',
+                onTap: () => _showDisclaimerDialog(context, l10n),
+              ),
+
+              const SizedBox(height: 30),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // ====================== BUILDER WIDGETS ======================
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
@@ -388,7 +190,7 @@ class SettingsScreen extends StatelessWidget {
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: Colors.white,
         ),
       ),
     );
@@ -401,35 +203,160 @@ class SettingsScreen extends StatelessWidget {
     required String subtitle,
     required VoidCallback onTap,
   }) {
-    return ListTile(
-      leading: Container(
-        width: 45,
-        height: 45,
-        decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 45,
+          height: 45,
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 24),
         ),
-        child: Icon(icon, color: iconColor, size: 24),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
         ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-      ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
     );
   }
 
-  void _showShareOptions(BuildContext context) {
+  Widget _buildFeatureTileWithImage({
+    required String imagePath,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 45,
+          height: 45,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+          child: Image.asset(imagePath, width: 24, height: 24),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      ),
+    );
+  }
+
+  // ====================== LAUNCH METHODS ======================
+
+  void _launchURL(BuildContext context, String url, String errorMsg) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch URL';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMsg)));
+    }
+  }
+
+  void _launchReview(BuildContext context) {
+    const url =
+        'https://play.google.com/store/apps/details?id=com.yourcompany.facebook_video_downloader';
+    _launchURL(context, url, 'Could not open Play Store for review');
+  }
+
+  void _launchMoreApps(BuildContext context) {
+    const url =
+        'https://play.google.com/store/apps/developer?id=FutureDial+Labs+LLC';
+    _launchURL(context, url, 'Could not open More Apps');
+  }
+
+  void _launchTermsOfUse(BuildContext context) {
+    const url =
+        'https://docs.google.com/document/d/12WTnUBG0hlYkg5fRPIwxP4VnNkUhv_gnC19ulCfgHic/edit?tab=t.0#heading=h.yww4ag84enkv';
+    _launchURL(context, url, 'Could not open Terms of Use');
+  }
+
+  void _launchPrivacyPolicy(BuildContext context) async {
+    const url =
+        'https://sites.google.com/view/inverter-town-llc/privacy-policy';
+    _launchURL(context, url, 'Could not open Privacy Policy');
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _launchFacebook(BuildContext context) {
+    const url = 'https://www.facebook.com';
+    _launchURL(context, url, 'Could not open Facebook');
+  }
+
+  // ====================== SHARE & DIALOG METHODS ======================
+
+  void _showShareOptions(BuildContext context, AppLocalizations? l10n) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -440,9 +367,9 @@ class SettingsScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Share App',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              l10n?.shareApp ?? 'Share App',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             ListTile(
@@ -454,11 +381,10 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 child: const Icon(Icons.share, color: Colors.green),
               ),
-              title: const Text('Share App Link'),
-              subtitle: const Text('Share app store link or direct download'),
+              title: Text(l10n?.shareAppLink ?? 'Share App Link'),
               onTap: () {
                 Navigator.pop(context);
-                _shareAppLink(context);
+                _shareAppLink(context, l10n);
               },
             ),
             ListTile(
@@ -468,13 +394,15 @@ class SettingsScreen extends StatelessWidget {
                   color: Colors.blue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.app_blocking_rounded, color: Colors.blue),
+                child: const Icon(
+                  Icons.app_blocking_rounded,
+                  color: Colors.blue,
+                ),
               ),
-              title: const Text('Share APK File'),
-              subtitle: const Text('Share the app APK file directly'),
+              title: Text(l10n?.shareAPKFile ?? 'Share APK File'),
               onTap: () {
                 Navigator.pop(context);
-                _shareAPKFile(context);
+                _shareAPKFile(context, l10n);
               },
             ),
             ListTile(
@@ -486,315 +414,99 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 child: const Icon(Icons.qr_code, color: Colors.orange),
               ),
-              title: const Text('Share QR Code'),
-              subtitle: const Text('Generate QR code for easy sharing'),
+              title: Text(l10n?.shareQRCode ?? 'Share QR Code'),
               onTap: () {
                 Navigator.pop(context);
-                _showQRCode(context);
+                _showQRCode(context, l10n);
               },
             ),
-            const SizedBox(height: 10),
           ],
         ),
       ),
     );
   }
 
-  void _shareAppLink(BuildContext context) {
+  void _shareAppLink(BuildContext context, AppLocalizations? l10n) {
     final appLink =
         'https://play.google.com/store/apps/details?id=com.yourcompany.facebook_video_downloader';
     final message =
         '''
 📱 Facebook Video Downloader App
 
-Features:
-✓ Download videos from Facebook
-✓ Save videos in HD quality
-✓ Watch offline anytime
-✓ Built-in video player
-✓ Download history
-✓ Beautiful and easy to use
+${l10n?.downloadNow ?? 'Download now'}: $appLink
 
-Download now: $appLink
-
-Share this amazing app with your friends!
+${l10n?.appDescription ?? 'Enjoy downloading videos from Facebook easily!'}
     ''';
 
     Share.share(message);
   }
 
-  Future<void> _shareAPKFile(BuildContext context) async {
-    // Request storage permission if needed
+  Future<void> _shareAPKFile(
+    BuildContext context,
+    AppLocalizations? l10n,
+  ) async {
     if (await Permission.storage.isDenied) {
-      final status = await Permission.storage.request();
-      if (!status.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Storage permission required to share APK'),
-          ),
-        );
-        return;
-      }
+      await Permission.storage.request();
     }
-
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 20),
-                Text('Preparing APK file...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // First, try to find if APK exists in app's installation directory
-      String? apkPath = await _findAPKFile();
-
-      if (apkPath == null) {
-        // If APK not found, create a shareable information file
-        await _createShareableInfoFile(context);
-      } else {
-        // Share the APK file
-        await Share.shareXFiles(
-          [XFile(apkPath)],
-          text:
-              'Check out this Facebook Video Downloader App!\n\nInstall and enjoy downloading videos from Facebook.',
-        );
-      }
-
-      Navigator.pop(context); // Close loading dialog
-    } catch (e) {
-      Navigator.pop(context); // Close loading dialog
-
-      // Show error and offer alternative
-      _showShareAlternativeDialog(context);
-    }
+    _showShareAlternativeDialog(context, l10n);
   }
 
-  Future<String?> _findAPKFile() async {
-    try {
-      // Try to find APK in app's installation directory
-      final appDocDir = await getApplicationDocumentsDirectory();
-      final apkDir = Directory('${appDocDir.path}/apk');
-
-      if (await apkDir.exists()) {
-        final files = apkDir.listSync();
-        for (var file in files) {
-          if (file.path.endsWith('.apk')) {
-            return file.path;
-          }
-        }
-      }
-
-      // Check in app's source directory
-      final sourceDir = Directory('/data/app');
-      if (await sourceDir.exists()) {
-        final packages = sourceDir.listSync();
-        for (var package in packages) {
-          if (package.path.contains('facebook_video_downloader') &&
-              package.path.endsWith('.apk')) {
-            return package.path;
-          }
-        }
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('Error finding APK: $e');
-      return null;
-    }
-  }
-
-  Future<void> _createShareableInfoFile(BuildContext context) async {
-    try {
-      final directory = await getTemporaryDirectory();
-      final filePath = '${directory.path}/share_app_info.txt';
-      final file = File(filePath);
-
-      final content = '''
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 FACEBOOK VIDEO DOWNLOADER APP
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-✨ FEATURES:
-• Download videos from Facebook easily
-• Save videos in multiple qualities (HD/SD)
-• Watch downloaded videos offline
-• Built-in video player
-• Download history management
-• Beautiful and intuitive UI
-• Lightweight and fast
-
-💡 HOW TO USE:
-1. Open Facebook in browser
-2. Find a video you want to download
-3. Tap the download button
-4. Select quality and download
-5. Watch anytime from saved videos
-
-📥 DOWNLOAD LINK:
-You can download the APK from:
-https://www.mediafire.com/file/your-apk-link
-
-Or search "Facebook Video Downloader" on Google Play Store
-
-🎯 WHY CHOOSE OUR APP:
-✓ 100% Free
-✓ No watermark
-✓ High-speed downloads
-✓ Regular updates
-✓ Privacy focused
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Share this app with your friends! 🎉
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      ''';
-
-      await file.writeAsString(content);
-      await Share.shareXFiles(
-        [XFile(filePath)],
-        text:
-            'Facebook Video Downloader App - Download videos from Facebook easily!\n\nCheck out this amazing app!',
-      );
-
-      // Clean up temp file
-      await file.delete();
-    } catch (e) {
-      throw Exception('Failed to create shareable file');
-    }
-  }
-
-  void _showShareAlternativeDialog(BuildContext context) {
+  void _showShareAlternativeDialog(
+    BuildContext context,
+    AppLocalizations? l10n,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Share App'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.info_outline, size: 50, color: Colors.orange),
-            const SizedBox(height: 10),
-            const Text(
-              'APK file not found on device',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'You can share the app link with your friends instead.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Column(
-                children: [
-                  Text('Alternative ways to share:'),
-                  SizedBox(height: 5),
-                  Text('1. Share app link', style: TextStyle(fontSize: 12)),
-                  Text('2. Share QR code', style: TextStyle(fontSize: 12)),
-                  Text('3. Share instructions', style: TextStyle(fontSize: 12)),
-                ],
-              ),
-            ),
-          ],
+        title: Text(l10n?.shareApp ?? 'Share App'),
+        content: Text(
+          l10n?.shareAppLinkMessage ?? 'Share the app link with your friends.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _shareAppLink(context);
+              _shareAppLink(context, l10n);
             },
-            child: const Text('Share Link'),
+            child: Text(l10n?.shareLink ?? 'Share Link'),
           ),
         ],
       ),
     );
   }
 
-  void _showQRCode(BuildContext context) {
+  void _showQRCode(BuildContext context, AppLocalizations? l10n) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Share via QR Code',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      spreadRadius: 2,
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Icon(Icons.qr_code, size: 150, color: Colors.black),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Scan to download',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
+              Text(
+                l10n?.shareViaQRCode ?? 'Share via QR Code',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'App Download Link:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 5),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SelectableText(
-                  'https://www.facebook-video-downloader.com/download',
-                  style: const TextStyle(fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              const Icon(Icons.qr_code, size: 150, color: Colors.black),
+              const SizedBox(height: 20),
+              Text(l10n?.scanToDownload ?? 'Scan to download the app'),
               const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
+                      child: Text(l10n?.close ?? 'Close'),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -802,9 +514,9 @@ Share this app with your friends! 🎉
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        _shareAppLink(context);
+                        _shareAppLink(context, l10n);
                       },
-                      child: const Text('Share Link'),
+                      child: Text(l10n?.shareLink ?? 'Share Link'),
                     ),
                   ),
                 ],
@@ -816,104 +528,56 @@ Share this app with your friends! 🎉
     );
   }
 
-  void _launchPrivacyPolicy(BuildContext context) async {
-    const url = 'https://your-privacy-policy-url.com';
-    try {
-      if (await canLaunch(url)) {
-        await launch(url);
-      } else {
-        throw 'Could not launch $url';
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch privacy policy')),
-      );
-    }
-  }
-
-  void _showDisclaimerDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
+  void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(l10n.disclaimerTitle),
-          content: SingleChildScrollView(child: Text(l10n.disclaimerContent)),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(l10n.ok),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: Text(l10n?.disclaimerTitle ?? 'Disclaimer'),
+        content: SingleChildScrollView(
+          child: Text(
+            l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n?.ok ?? 'OK'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context, AppLocalizations? l10n) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('About App'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.video_library, size: 60, color: Colors.blue),
-              const SizedBox(height: 10),
-              const Text(
-                'Facebook Video Downloader',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 5),
-              const Text('Version 1.0.0'),
-              const SizedBox(height: 10),
-              const Text(
-                'Download and save videos from Facebook easily.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 15),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Column(
-                  children: [
-                    Text('📹 HD Quality Downloads'),
-                    SizedBox(height: 5),
-                    Text('💾 Save to Device Storage'),
-                    SizedBox(height: 5),
-                    Text('▶️ Built-in Video Player'),
-                    SizedBox(height: 5),
-                    Text('📂 Download History'),
-                    SizedBox(height: 5),
-                    Text('🔄 Regular Updates'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+      builder: (context) => AlertDialog(
+        title: Text(l10n?.aboutApp ?? 'About App'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.video_library, size: 60, color: Color(0xFF0066ff)),
+            const SizedBox(height: 10),
+            Text(
+              l10n?.appTitle ?? 'Facebook Video Downloader',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                _shareAppLink(context);
-              },
-              icon: const Icon(Icons.share),
-              label: const Text('Share App'),
+            Text('${l10n?.version ?? 'Version'} 1.0.0'),
+            const SizedBox(height: 15),
+            Text(
+              l10n?.appDescription ??
+                  'Download and save videos from Facebook easily.',
+              textAlign: TextAlign.center,
             ),
           ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n?.close ?? 'Close'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 
 class LanguageProvider extends ChangeNotifier {
   Locale _locale = const Locale('en');
-  
+
   Locale get locale => _locale;
-  
-  void setLanguage(Locale locale) {
-    _locale = locale;
-    notifyListeners();
+
+  void setLanguage(Locale newLocale) {
+    if (_locale != newLocale) {
+      _locale = newLocale;
+      notifyListeners();
+    }
   }
-  
-  String getCurrentLanguageName() {
+
+  // Optional: Add method to get language name
+  String getLanguageName() {
     switch (_locale.languageCode) {
-      case 'en':
-        return 'English';
       case 'ur':
         return 'اردو';
       case 'ar':

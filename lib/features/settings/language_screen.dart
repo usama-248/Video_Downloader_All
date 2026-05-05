@@ -26,7 +26,7 @@ class LanguageScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back, color: Color.fromARGB(221, 255, 255, 255)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -184,3 +184,12 @@ class LanguageScreen extends StatelessWidget {
     });
   }
 }
+
+
+
+
+
+
+
+
+

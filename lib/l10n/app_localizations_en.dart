@@ -144,68 +144,343 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ok => 'OK';
 
   @override
-  String get premiumTitle => 'پریمیم';
+  String get skip => 'Skip';
 
   @override
-  String get startLikeAPro => 'پرو کی طرح شروع کریں';
+  String get next => 'NEXT';
 
   @override
-  String get unlockFeatures => 'تمام فیچرز کھولیں';
+  String get get_started => 'GET STARTED';
 
   @override
-  String get basic => 'بنیادی';
+  String get completed => 'Completed';
 
   @override
-  String get downloadNow => 'ابھی ڈاؤن لوڈ کریں';
+  String get onboarding_title_1 => 'Effortless Video Management';
 
   @override
-  String get featuresTitle => 'خصوصیات';
+  String get onboarding_desc_1 => 'An all-in-one solution for organizing and managing your downloaded video collection with intuitive ease. Take control';
 
   @override
-  String get featureUnlimited => 'لامحدود ویڈیو ڈاؤن لوڈ';
+  String get onboarding_title_2 => 'Explore Facebook Videos';
 
   @override
-  String get featureHD => 'ایچ ڈی کوالٹی میں ڈاؤن لوڈ کریں';
+  String get onboarding_desc_2 => 'Dive into a diverse range of content with a seamless and engaging experience for discovering, watching, and downloading';
 
   @override
-  String get featureFast => 'تیز ترین ڈاؤن لوڈ سپیڈ';
+  String get onboarding_title_3 => 'Download with Ease';
 
   @override
-  String get featureTrending => 'ٹرینڈنگ دیکھیں';
+  String get onboarding_desc_3 => 'Hassle-free video downloader with a simple and modern interface: Just paste the video link, and within seconds, you\'ll';
 
   @override
-  String get featureAnything => 'کچھ بھی ڈاؤن لوڈ کریں';
+  String get art_design_video => 'Process of art design.mp4';
 
   @override
-  String get freeTrial => 'مفت ٹرائل شروع کریں';
+  String get historical_place_video => 'Historical Place.mp4';
 
   @override
-  String get noPayment => 'ابھی کوئی ادائیگی نہیں';
+  String get science_speech_video => 'Speech of Science.mp4';
 
   @override
-  String get time => '۱۲:۲۸';
+  String get programming_course_video => 'Programming course.mp4';
 
   @override
-  String get browserTab => 'براؤزر';
+  String get video_download => 'Video Download';
 
   @override
-  String get watchTab => 'دیکھیں';
+  String get tap_to_download => 'Tap to download your favorite videos';
 
   @override
-  String get savedTab => 'محفوظ';
+  String get video_detected => 'Video Detected! Tap to Download';
 
   @override
-  String get allImages => 'تمام تصاویر';
+  String get downloading_video => 'Downloading Video';
 
   @override
-  String get signIn => 'سائن ان کریں';
+  String get extracting_audio => 'Extracting audio from video...';
 
   @override
-  String get historyTitle => 'ڈاؤن لوڈ ہسٹری';
+  String get downloading => 'Downloading...';
 
   @override
-  String get noDownloads => 'ابھی تک کوئی ڈاؤن لوڈ نہیں';
+  String get extracting => 'Extracting audio...';
 
   @override
-  String get historyHint => 'براؤزر سے ویڈیوز ڈاؤن لوڈ کریں';
+  String get active => 'Active';
+
+  @override
+  String get download_options => 'Download Options';
+
+  @override
+  String get video_quality => 'VIDEO QUALITY';
+
+  @override
+  String get audio_only => 'AUDIO ONLY';
+
+  @override
+  String get video_detected_message => 'Video detected! Choose download option';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get high_quality => 'High Quality';
+
+  @override
+  String get medium_quality => 'Medium Quality';
+
+  @override
+  String get low_quality => 'Low Quality';
+
+  @override
+  String get audio_only_title => 'Audio Only';
+
+  @override
+  String get extract_audio => 'Extract';
+
+  @override
+  String get download_success_video => 'Download Complete!';
+
+  @override
+  String get download_success_audio => 'Audio Extracted!';
+
+  @override
+  String get saved_to_movies => 'Saved to Movies';
+
+  @override
+  String get saved_to_music => 'Saved to Music';
+
+  @override
+  String get view_in_history => 'View in History';
+
+  @override
+  String get download_failed => 'Download Failed';
+
+  @override
+  String get download_720p => 'Download 720p';
+
+  @override
+  String get loading_video_player => 'Loading video player...';
+
+  @override
+  String get video_ready => 'Video ready! Tap Download to save.';
+
+  @override
+  String get processing_link => 'Processing link...';
+
+  @override
+  String get paste_valid_url => 'Please enter a valid URL';
+
+  @override
+  String get extract_video_id_error => 'Could not extract video ID. Make sure it\'s a valid Facebook video link.';
+
+  @override
+  String get storage_permission_required => 'Storage permission required';
+
+  @override
+  String get please_enter_url => 'Please enter a URL first';
+
+  @override
+  String get please_paste_link => 'Please paste a link first';
+
+  @override
+  String get get_video => 'Get Video';
+
+  @override
+  String get paste_link => 'Paste Link';
+
+  @override
+  String get how_to_download => 'How to download?';
+
+  @override
+  String get step_1 => 'Open Facebook and copy video link';
+
+  @override
+  String get step_2 => 'Paste link in the app and tap Get Video';
+
+  @override
+  String get step_3 => 'Tap Download to open video and save';
+
+  @override
+  String get open_facebook => 'Open Facebook';
+
+  @override
+  String get how_to_download_videos => 'How to download videos?';
+
+  @override
+  String get got_it => 'Got it';
+
+  @override
+  String get watch_videos => 'Watch Videos';
+
+  @override
+  String get watch_facebook_videos => 'Watch Facebook Videos';
+
+  @override
+  String get tap_below_to_open_facebook => 'Tap the button below to open Facebook and browse videos';
+
+  @override
+  String get tip_find_video => 'Tip: Find a video, tap share, then copy link';
+
+  @override
+  String get tip_paste_link => 'Then go to Home tab and paste the link';
+
+  @override
+  String get facebook_video => 'Facebook Video';
+
+  @override
+  String get full_hd_best_quality => 'Full HD • Best Quality';
+
+  @override
+  String get hd_ready => 'HD Ready';
+
+  @override
+  String get standard_quality => 'Standard Quality';
+
+  @override
+  String get small_size => 'Small Size';
+
+  @override
+  String get mp3_128kbps => '128 kbps';
+
+  @override
+  String get extract_audio_from_video => 'Extract audio from video';
+
+  @override
+  String get processing_video => 'Processing link...';
+    @override
+  String get browserTab => 'Browser';
+  
+  @override
+  String get watchTab => 'Watch';
+  
+  @override
+  String get savedTab => 'Saved';
+    @override
+  String get featureUnlimited => 'Unlimited Video Downloads';
+  
+  @override
+  String get featureHD => 'Download in HD Quality';
+  
+  @override
+  String get featureFast => 'Ultra-Fast Download Speed';
+  
+  @override
+  String get featureTrending => 'Watch Trending';
+  
+  @override
+  String get featureAnything => 'Download anything';
+  
+  @override
+  String get startLikeAPro => 'START LIKE A PRO';
+  
+  @override
+  String get unlockFeatures => 'Unlock All Features';
+  
+  @override
+  String get premiumTitle => 'Weekly Premium';
+  
+  @override
+  String get freeTrial => 'Start 3-Days Free Trial';
+  
+  @override
+  String get noPayment => 'No Payment Now!';
+    @override
+  String get pro_badge => 'PRO';
+  
+  @override
+  String get not_available => 'Not Available';
+  
+  @override
+  String get not_available_message => '1080p not available, downloading best available...';
+  
+  @override
+  String get seamlessExperience => 'Seamless Experience';
+  
+  @override
+  String get adsFreeExperience => 'Ads Free Experience';
+    @override
+  String get historyTitle => 'Download History';
+  @override
+  String get noDownloads => 'No downloads yet';
+  @override
+  String get historyHint => 'Download videos from the browser';
+  @override
+
+  @override
+  String get day => 'day';
+  @override
+  String get days => 'days';
+  @override
+  String get hour => 'hour';
+  @override
+  String get hours => 'hours';
+  @override
+  String get minute => 'minute';
+  @override
+  String get minutes => 'minutes';
+  @override
+  String get ago => 'ago';
+  @override
+  String get just_now => 'Just now';
+  @override
+  String get unknown_date => 'Unknown date';
+  @override
+  String get delete_video => 'Delete Video';
+  @override
+  String get delete_video_confirm => 'Delete';
+  @override
+  String get delete => 'Delete';
+  @override
+  String get deleted => 'deleted';
+  @override
+  String get clear_all => 'Clear All';
+  @override
+  String get clear_all_confirm => 'Delete all downloaded videos?';
+  @override
+  String get delete_all => 'Delete All';
+  @override
+  String get all_videos_deleted => 'All videos deleted';
+    @override
+  String get shareAppLinkMessage => 'Share the app link with your friends.';
+  @override
+  String get shareLink => 'Share Link';
+  @override
+  String get close => 'Close';
+  @override
+  String get aboutApp => 'About App';
+  @override
+  String get version => 'Version';
+  @override
+  String get appDescription => 'Download and save videos from Facebook easily.';
+  @override
+  String get giveUsReview => 'Give Us Review';
+  @override
+  String get supportUsWithReview => 'Support us with your valuable review';
+  @override
+  String get moreApps => 'More Apps';
+  @override
+  String get discoverOurApps => 'Discover our other applications';
+  @override
+  String get termsOfUse => 'Terms of Use';
+  @override
+  String get readTermsConditions => 'Read our Terms & Conditions';
+  @override
+  String get shareAppLink => 'Share App Link';
+  @override
+  String get shareAPKFile => 'Share APK File';
+  @override
+  String get shareQRCode => 'Share QR Code';
+  @override
+  String get shareViaQRCode => 'Share via QR Code';
+  @override
+  String get scanToDownload => 'Scan to download the app';
+  @override
+  String get downloadNow => 'Download now';
+  // ...existing code...
+  @override
+  String get need_help => 'Need Help?';
+// ...existing code...
+  
 }
