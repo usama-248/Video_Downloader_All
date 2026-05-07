@@ -1,9 +1,25 @@
+
+
+
+
+
+
+
+
+
+
 import 'package:facebook_video_downloader/features/onboarding/screens/onboarding_screen.dart';
+import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final bool isReturningUser;
+  
+  const SplashScreen({
+    super.key,
+    this.isReturningUser = false,
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -45,17 +61,31 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // First launch: Go to Onboarding
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const OnboardingScreen(),
-        transitionDuration: const Duration(milliseconds: 400),
-        transitionsBuilder: (_, animation, __, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
+    if (widget.isReturningUser) {
+      // RETURNING USER: Go directly to Premium Screen
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const PremiumScreen(),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    } else {
+      // NEW USER: Go to Onboarding Screen
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const OnboardingScreen(),
+          transitionDuration: const Duration(milliseconds: 400),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
+    }
   }
 
   @override
@@ -100,7 +130,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: const Icon(
                         Icons.download_rounded,
                         size: 72,
-                        color: Color(0xFF0066ff),
+                        color: const Color(0xFF0066ff),
                       ),
                     ),
                     const SizedBox(height: 32),
