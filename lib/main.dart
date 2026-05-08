@@ -4,6 +4,7 @@ import 'package:facebook_video_downloader/features/navigation/onboarding_directo
 import 'package:facebook_video_downloader/features/providers/language_provider.dart';
 import 'package:facebook_video_downloader/features/splash/spalshscreen.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // Keep app running with fallback defaults when .env is missing.
+  }
 
   // REMOVED the auto-clear for production
   // Only uncomment for testing

@@ -1,6 +1,7 @@
 // ignore_for_file: unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
+import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -246,7 +247,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
-        'Referer': 'https://www.facebook.com/',
+        'Referer': AppEnv.facebookReferer,
       };
 
       try {
@@ -880,7 +881,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8',
-        'Referer': 'https://www.facebook.com/',
+        'Referer': AppEnv.facebookReferer,
       };
 
       String savePath;
@@ -1097,7 +1098,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
-        'Referer': 'https://www.facebook.com/',
+        'Referer': AppEnv.facebookReferer,
       };
 
       String savePath;

@@ -3,6 +3,7 @@
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
+import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
@@ -319,26 +320,22 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _launchReview(BuildContext context) {
-    const url =
-        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
+    final url = AppEnv.appStoreUrl;
     _launchURL(context, url, 'Could not open Play Store for review');
   }
 
   void _launchMoreApps(BuildContext context) {
-    const url =
-        'https://play.google.com/store/apps/developer?id=FutureDial+Labs+LLC';
+    final url = AppEnv.moreAppsUrl;
     _launchURL(context, url, 'Could not open More Apps');
   }
 
   void _launchTermsOfUse(BuildContext context) {
-    const url =
-        'https://docs.google.com/document/d/12WTnUBG0hlYkg5fRPIwxP4VnNkUhv_gnC19ulCfgHic/edit?tab=t.0#heading=h.yww4ag84enkv';
+    final url = AppEnv.termsOfUseUrl;
     _launchURL(context, url, 'Could not open Terms of Use');
   }
 
   void _launchPrivacyPolicy(BuildContext context) async {
-    const url =
-        'https://sites.google.com/view/inverter-town-llc/privacy-policy';
+    final url = AppEnv.privacyPolicyUrl;
     _launchURL(context, url, 'Could not open Privacy Policy');
   }
 
@@ -361,7 +358,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _launchFacebook(BuildContext context) {
-    const url = 'https://www.facebook.com';
+    final url = AppEnv.facebookBaseUrl;
     _launchURL(context, url, 'Could not open Facebook');
   }
 
@@ -438,8 +435,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _shareAppLink(BuildContext context, AppLocalizations? l10n) {
-    final appLink =
-        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
+    final appLink = AppEnv.appStoreUrl;
     final message =
         '''
 📱 Facebook Video Downloader App

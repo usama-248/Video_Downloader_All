@@ -1,6 +1,7 @@
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
+import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -130,7 +131,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                openInChrome('https://www.facebook.com');
+                openInChrome(AppEnv.facebookBaseUrl);
               },
               tooltip: localizations?.facebook ?? 'Facebook',
             ),

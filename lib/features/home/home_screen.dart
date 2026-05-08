@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:metadata_fetch/metadata_fetch.dart';
+import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart'; // Add this import
 
@@ -358,7 +359,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
   bool _isFetching = false;
 
   Future<void> _fetchMetadata(String url) async {
-    if (url.isEmpty || !url.contains('facebook.com')) return;
+    if (url.isEmpty || !url.contains(AppEnv.facebookHost)) return;
 
     setState(() => _isFetching = true);
 
@@ -470,7 +471,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
               ),
               onPressed: () {
                 // Replace WebView with Chrome browser
-                openInChrome('https://www.facebook.com');
+                openInChrome(AppEnv.facebookBaseUrl);
               },
               tooltip: localizations?.facebook ?? 'Facebook',
             ),
@@ -547,7 +548,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                         child: TextField(
                           controller: _urlController,
                           onChanged: (value) {
-                            if (value.contains('facebook.com')) {
+                            if (value.contains(AppEnv.facebookHost)) {
                               _fetchMetadata(value);
                             }
                           },
@@ -967,7 +968,7 @@ class _WatchScreen extends StatelessWidget {
               ),
               onPressed: () {
                 // Replace WebView with Chrome browser
-                openInChrome('https://www.facebook.com');
+                openInChrome(AppEnv.facebookBaseUrl);
               },
               tooltip: localizations?.facebook ?? 'Facebook',
             ),
@@ -1085,7 +1086,7 @@ class _WatchScreen extends StatelessWidget {
                           child: ElevatedButton.icon(
                             onPressed: () {
                               // Replace WebView with Chrome browser
-                              openInChrome('https://www.facebook.com');
+                              openInChrome(AppEnv.facebookBaseUrl);
                             },
 
                             label: Text(
