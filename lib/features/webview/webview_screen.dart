@@ -1153,6 +1153,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
