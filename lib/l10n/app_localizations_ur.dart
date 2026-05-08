@@ -494,4 +494,5 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get need_help => 'مدد چاہیے؟'; // or your Urdu translation
 // ...existing code...
+String get refresh => 'تازہ کریں'; // or your Urdu translation
 }

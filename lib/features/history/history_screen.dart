@@ -1,16 +1,13 @@
-
-//workinggggggggggggggggggggggggggggggggggggggggggggggggggggggddddddddddddddddddddddgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
-
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
-import 'package:facebook_video_downloader/features/webview/webview_screen.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class HistoryScreen extends StatefulWidget {
@@ -24,13 +21,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // Track items that are being deleted to prevent multiple deletions
   final Set<int> _deletingItems = {};
 
-  void _navigateToWebView(BuildContext context, {required String url}) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => WebViewScreen(url: url),
-      ),
-    );
+  Future<void> openInChrome(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -40,12 +34,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF0066ff),
-        leading: IconButton(
-          // ADD THIS
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
@@ -98,7 +88,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                _navigateToWebView(context, url: 'https://www.facebook.com');
+                openInChrome('https://www.facebook.com');
               },
               tooltip: localizations?.facebook ?? 'Facebook',
             ),
@@ -177,20 +167,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.white),
-                      onPressed: () async {
-                        await controller.loadHistory();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              localizations?.historyHint ?? 'History refreshed',
-                            ),
-                            duration: const Duration(seconds: 1),
+                    child: Tooltip(
+                      message: localizations?.history ?? 'Refresh History',
+                      child: TextButton(
+                        child: Text(
+                          localizations?.refresh ?? 'Refresh',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
-                        );
-                      },
-                      tooltip: localizations?.history ?? 'Refresh History',
+                        ),
+                        onPressed: () async {
+                          await controller.loadHistory();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                localizations?.historyHint ??
+                                    'History refreshed',
+                              ),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -441,11 +440,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
       if (diff.inDays > 7) {
         return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
       } else if (diff.inDays > 0) {
-        return '${diff.inDays} ${localizations?.day ?? 'day'}${diff.inDays > 1 ? (localizations?.days ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+        final days = diff.inDays;
+        if (days == 1) {
+          return '$days ${localizations?.day ?? 'day'} ${localizations?.ago ?? 'ago'}';
+        } else {
+          return '$days ${localizations?.days ?? 'days'} ${localizations?.ago ?? 'ago'}';
+        }
       } else if (diff.inHours > 0) {
-        return '${diff.inHours} ${localizations?.hour ?? 'hour'}${diff.inHours > 1 ? (localizations?.hours ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+        final hours = diff.inHours;
+        if (hours == 1) {
+          return '$hours ${localizations?.hour ?? 'hour'} ${localizations?.ago ?? 'ago'}';
+        } else {
+          return '$hours ${localizations?.hours ?? 'hours'} ${localizations?.ago ?? 'ago'}';
+        }
       } else if (diff.inMinutes > 0) {
-        return '${diff.inMinutes} ${localizations?.minute ?? 'minute'}${diff.inMinutes > 1 ? (localizations?.minutes ?? 's') : ''} ${localizations?.ago ?? 'ago'}';
+        final minutes = diff.inMinutes;
+        if (minutes == 1) {
+          return '$minutes ${localizations?.minute ?? 'minute'} ${localizations?.ago ?? 'ago'}';
+        } else {
+          return '$minutes ${localizations?.minutes ?? 'minutes'} ${localizations?.ago ?? 'ago'}';
+        }
       } else {
         return localizations?.just_now ?? 'Just now';
       }

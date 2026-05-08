@@ -26,7 +26,10 @@ class LanguageScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color.fromARGB(221, 255, 255, 255)),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color.fromARGB(221, 0, 0, 0),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -87,7 +90,7 @@ class LanguageScreen extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     final isSelected = currentLocale.languageCode == languageCode;
-    
+
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -101,11 +104,7 @@ class LanguageScreen extends StatelessWidget {
                 color: iconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 28,
-              ),
+              child: Icon(icon, color: iconColor, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -119,11 +118,7 @@ class LanguageScreen extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Colors.blue,
-                size: 24,
-              ),
+              const Icon(Icons.check_circle, color: Colors.blue, size: 24),
             if (!isSelected)
               const Icon(
                 Icons.radio_button_unchecked,
@@ -137,20 +132,23 @@ class LanguageScreen extends StatelessWidget {
   }
 
   Widget _buildDivider() {
-    return const Divider(
-      height: 0,
-      thickness: 0.5,
-      color: Colors.grey,
-    );
+    return const Divider(height: 0, thickness: 0.5, color: Colors.grey);
   }
 
-  void _changeLanguage(BuildContext context, Locale locale, String languageName) {
+  void _changeLanguage(
+    BuildContext context,
+    Locale locale,
+    String languageName,
+  ) {
     final l10n = AppLocalizations.of(context)!;
-    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
-    
+    final languageProvider = Provider.of<LanguageProvider>(
+      context,
+      listen: false,
+    );
+
     // Update the language
     languageProvider.setLanguage(locale);
-    
+
     // Show confirmation message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -158,10 +156,10 @@ class LanguageScreen extends StatelessWidget {
         duration: const Duration(seconds: 2),
       ),
     );
-    
+
     // Go back to settings screen
     Navigator.pop(context);
-    
+
     // Optional: Show restart dialog
     Future.delayed(const Duration(milliseconds: 300), () {
       showDialog(
@@ -184,12 +182,3 @@ class LanguageScreen extends StatelessWidget {
     });
   }
 }
-
-
-
-
-
-
-
-
-

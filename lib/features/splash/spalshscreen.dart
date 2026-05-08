@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 import 'package:facebook_video_downloader/features/onboarding/screens/onboarding_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:flutter/material.dart';
@@ -15,11 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
   final bool isReturningUser;
-  
-  const SplashScreen({
-    super.key,
-    this.isReturningUser = false,
-  });
+
+  const SplashScreen({super.key, this.isReturningUser = false});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();

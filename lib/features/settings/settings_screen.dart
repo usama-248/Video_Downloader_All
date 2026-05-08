@@ -164,6 +164,7 @@ class SettingsScreen extends StatelessWidget {
               ),
 
               _buildFeatureTile(
+                backgroundColor: Colors.white.withOpacity(0.95),
                 icon: Icons.copyright,
                 iconColor: Colors.grey,
                 title: l10n?.disclaimer ?? 'Disclaimer',
@@ -202,11 +203,12 @@ class SettingsScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? backgroundColor,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -528,25 +530,34 @@ ${l10n?.appDescription ?? 'Enjoy downloading videos from Facebook easily!'}
     );
   }
 
-  void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n?.disclaimerTitle ?? 'Disclaimer'),
-        content: SingleChildScrollView(
+ void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.white, // White background
+      title: Text(
+        l10n?.disclaimerTitle ?? 'Disclaimer',
+        style: const TextStyle(color: Colors.black), // Black title text
+      ),
+      content: SingleChildScrollView(
+        child: Text(
+          l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
+          style: const TextStyle(color: Colors.black), // Black content text
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
           child: Text(
-            l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
+            l10n?.ok ?? 'OK',
+            style: const TextStyle(color: Colors.black), // Black button text
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n?.ok ?? 'OK'),
-          ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
+  
 
   void _showAboutDialog(BuildContext context, AppLocalizations? l10n) {
     showDialog(

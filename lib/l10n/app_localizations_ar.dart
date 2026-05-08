@@ -492,5 +492,6 @@ class AppLocalizationsAr extends AppLocalizations {
   // ...existing code...
   @override
   String get need_help => 'هل تحتاج مساعدة؟'; // or your Arabic translation
+  String get refresh => 'تحديث'; // or your Arabic translation
   // ...existing code...
 }

@@ -190,6 +190,12 @@ abstract class AppLocalizations {
   /// **'History'**
   String get history;
 
+/// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
   /// No description provided for @noVideos.
   ///
   /// In en, this message translates to:
@@ -650,7 +656,7 @@ abstract class AppLocalizations {
   /// No description provided for @please_paste_link.
   ///
   /// In en, this message translates to:
-  /// **'Please paste a link first'**
+  /// **'Paste your Link Here'**
   String get please_paste_link;
 
   /// No description provided for @get_video.

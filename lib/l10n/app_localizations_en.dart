@@ -57,7 +57,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noVideos => 'No videos found';
 
   @override
-  String get searchHint => 'Enter URL or search term';
+  String get searchHint => 'Paste your link here...';
 
   @override
   String get go => 'Go';
@@ -78,7 +78,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageChanged => 'Language changed to';
 
   @override
-  String get restartMessage => 'Restart the app for changes to take full effect';
+  String get restartMessage =>
+      'Restart the app for changes to take full effect';
 
   @override
   String get topFeatures => 'Top Features';
@@ -138,7 +139,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get disclaimerTitle => 'Disclaimer';
 
   @override
-  String get disclaimerContent => 'Contents are protected by copyright. All videos downloaded are for personal use only. Please respect intellectual property rights and do not distribute copyrighted content without permission.';
+  String get disclaimerContent =>
+      'Contents are protected by copyright. All videos downloaded are for personal use only. Please respect intellectual property rights and do not distribute copyrighted content without permission.';
 
   @override
   String get ok => 'OK';
@@ -159,19 +161,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboarding_title_1 => 'Effortless Video Management';
 
   @override
-  String get onboarding_desc_1 => 'An all-in-one solution for organizing and managing your downloaded video collection with intuitive ease. Take control';
+  String get onboarding_desc_1 =>
+      'An all-in-one solution for organizing and managing your downloaded video collection with intuitive ease. Take control';
 
   @override
   String get onboarding_title_2 => 'Explore Facebook Videos';
 
   @override
-  String get onboarding_desc_2 => 'Dive into a diverse range of content with a seamless and engaging experience for discovering, watching, and downloading';
+  String get onboarding_desc_2 =>
+      'Dive into a diverse range of content with a seamless and engaging experience for discovering, watching, and downloading';
 
   @override
   String get onboarding_title_3 => 'Download with Ease';
 
   @override
-  String get onboarding_desc_3 => 'Hassle-free video downloader with a simple and modern interface: Just paste the video link, and within seconds, you\'ll';
+  String get onboarding_desc_3 =>
+      'Hassle-free video downloader with a simple and modern interface: Just paste the video link, and within seconds, you\'ll';
 
   @override
   String get art_design_video => 'Process of art design.mp4';
@@ -273,7 +278,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paste_valid_url => 'Please enter a valid URL';
 
   @override
-  String get extract_video_id_error => 'Could not extract video ID. Make sure it\'s a valid Facebook video link.';
+  String get extract_video_id_error =>
+      'Could not extract video ID. Make sure it\'s a valid Facebook video link.';
 
   @override
   String get storage_permission_required => 'Storage permission required';
@@ -318,7 +324,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get watch_facebook_videos => 'Watch Facebook Videos';
 
   @override
-  String get tap_below_to_open_facebook => 'Tap the button below to open Facebook and browse videos';
+  String get tap_below_to_open_facebook =>
+      'Tap the button below to open Facebook and browse videos';
 
   @override
   String get tip_find_video => 'Tip: Find a video, tap share, then copy link';
@@ -349,65 +356,64 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get processing_video => 'Processing link...';
-    @override
+  @override
   String get browserTab => 'Browser';
-  
+
   @override
   String get watchTab => 'Watch';
-  
+
   @override
   String get savedTab => 'Saved';
-    @override
+  @override
   String get featureUnlimited => 'Unlimited Video Downloads';
-  
+
   @override
   String get featureHD => 'Download in HD Quality';
-  
+
   @override
   String get featureFast => 'Ultra-Fast Download Speed';
-  
+
   @override
   String get featureTrending => 'Watch Trending';
-  
+
   @override
   String get featureAnything => 'Download anything';
-  
+
   @override
   String get startLikeAPro => 'START LIKE A PRO';
-  
+
   @override
   String get unlockFeatures => 'Unlock All Features';
-  
+
   @override
   String get premiumTitle => 'Weekly Premium';
-  
+
   @override
   String get freeTrial => 'Start 3-Days Free Trial';
-  
+
   @override
   String get noPayment => 'No Payment Now!';
-    @override
+  @override
   String get pro_badge => 'PRO';
-  
+
   @override
   String get not_available => 'Not Available';
-  
+
   @override
-  String get not_available_message => '1080p not available, downloading best available...';
-  
+  String get not_available_message =>
+      '1080p not available, downloading best available...';
+
   @override
   String get seamlessExperience => 'Seamless Experience';
-  
+
   @override
   String get adsFreeExperience => 'Ads Free Experience';
-    @override
+  @override
   String get historyTitle => 'Download History';
   @override
   String get noDownloads => 'No downloads yet';
   @override
   String get historyHint => 'Download videos from the browser';
-  @override
-
   @override
   String get day => 'day';
   @override
@@ -442,7 +448,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete_all => 'Delete All';
   @override
   String get all_videos_deleted => 'All videos deleted';
-    @override
+  @override
   String get shareAppLinkMessage => 'Share the app link with your friends.';
   @override
   String get shareLink => 'Share Link';
@@ -481,6 +487,6 @@ class AppLocalizationsEn extends AppLocalizations {
   // ...existing code...
   @override
   String get need_help => 'Need Help?';
-// ...existing code...
-  
+  String get refresh => 'Refresh';
+  // ...existing code...
 }

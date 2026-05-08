@@ -1,13 +1,33 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart'; // Add this import
 
 import '../webview/webview_screen.dart';
 import '../history/history_screen.dart';
 import '../premium/premium_screen.dart';
 import '../settings/settings_screen.dart';
+
+// Add this function outside of any class or inside a utility class
+Future<void> openInChrome(String url) async {
+  final Uri uri = Uri.parse(url);
+  try {
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication, // Opens in external browser
+      );
+    } else {
+      throw 'Could not launch $url';
+    }
+  } catch (e) {
+    print('Error opening URL: $e');
+    // Fallback: You might want to show a snackbar or dialog here
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -222,29 +242,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () => _showReadMoreDialog(context),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Read more',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: const Color(0xFF0066ff),
-                          fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 14,
-                        color: const Color(0xFF0066ff),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -297,42 +294,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showReadMoreDialog(BuildContext parentContext) {
-    final localizations = AppLocalizations.of(parentContext);
-    showDialog(
-      context: parentContext,
-      builder: (context) => AlertDialog(
-        title: const Text('More Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '📋 Copyright & Usage Policy',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              localizations?.disclaimerContent ??
-                  '• All videos are sourced from third-party platforms.\n\n'
-                      '• Users are solely responsible for ensuring they have the necessary rights and permissions before downloading or reposting any content.\n\n'
-                      '• This application does not claim ownership of any downloaded content.\n\n'
-                      '• Respect intellectual property rights and fair use policies.\n\n'
-                      '• For any copyright concerns, please contact the content owner directly.',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(localizations?.ok ?? 'Close'),
-          ),
-        ],
       ),
     );
   }
@@ -457,6 +418,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF0066ff),
         title: Align(
           alignment: Alignment.centerLeft,
@@ -508,7 +470,8 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                _navigateToWebView(context, url: 'https://www.facebook.com');
+                // Replace WebView with Chrome browser
+                openInChrome('https://www.facebook.com');
               },
               tooltip: localizations?.facebook ?? 'Facebook',
             ),
@@ -681,7 +644,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 20),
                 Container(
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -946,16 +909,6 @@ class _BrowserScreenState extends State<_BrowserScreen> {
 class _WatchScreen extends StatelessWidget {
   const _WatchScreen();
 
-  void _openFacebookWebView(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            const WebViewScreen(url: 'https://www.facebook.com'),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
@@ -963,6 +916,7 @@ class _WatchScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF0066ff),
         title: Align(
           alignment: Alignment.centerLeft,
@@ -1014,7 +968,8 @@ class _WatchScreen extends StatelessWidget {
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                _navigateToWebView(context, url: 'https://www.facebook.com');
+                // Replace WebView with Chrome browser
+                openInChrome('https://www.facebook.com');
               },
               tooltip: localizations?.facebook ?? 'Facebook',
             ),
@@ -1130,7 +1085,10 @@ class _WatchScreen extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: () => _openFacebookWebView(context),
+                            onPressed: () {
+                              // Replace WebView with Chrome browser
+                              openInChrome('https://www.facebook.com');
+                            },
                             icon: const Icon(Icons.facebook, size: 24),
                             label: Text(
                               localizations?.open_facebook ?? 'Open Facebook',
@@ -1149,9 +1107,7 @@ class _WatchScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   // How to Download Videos - Beautiful Section
                   Container(
                     decoration: BoxDecoration(
@@ -1216,14 +1172,12 @@ class _WatchScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-
                         Padding(
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             children: [
                               // Step 1
                               _buildStepCard(
-                                number: '1',
                                 title: 'Find & Share',
                                 description:
                                     localizations?.step_1 ??
@@ -1232,10 +1186,8 @@ class _WatchScreen extends StatelessWidget {
                                 color: const Color(0xFF1877F2),
                               ),
                               const SizedBox(height: 16),
-
                               // Step 2
                               _buildStepCard(
-                                number: '2',
                                 title: 'Copy Link',
                                 description:
                                     'Select "Copy Link" from the share options',
@@ -1243,10 +1195,8 @@ class _WatchScreen extends StatelessWidget {
                                 color: const Color(0xFF34A853),
                               ),
                               const SizedBox(height: 16),
-
                               // Step 3
                               _buildStepCard(
-                                number: '3',
                                 title: 'Paste & Download',
                                 description:
                                     localizations?.step_2 ??
@@ -1260,9 +1210,7 @@ class _WatchScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   // Pro Tips Section
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -1321,9 +1269,7 @@ class _WatchScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   // Need Help Button
                   SizedBox(
                     width: double.infinity,
@@ -1425,7 +1371,6 @@ class _WatchScreen extends StatelessWidget {
   }
 
   Widget _buildStepCard({
-    required String number,
     required String title,
     required String description,
     required IconData icon,
@@ -1440,33 +1385,8 @@ class _WatchScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Step Number
           Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [color, color.withOpacity(0.7)],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // Icon
-          Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
@@ -1474,7 +1394,6 @@ class _WatchScreen extends StatelessWidget {
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 12),
-          // Text
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1545,22 +1464,4 @@ class _WatchScreen extends StatelessWidget {
       ],
     );
   }
-
-  void _navigateToWebView(BuildContext context, {required String url}) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => WebViewScreen(url: url)),
-    );
-  }
 }
-
-
-
-
-
-
-
-
-
-
-
