@@ -11,7 +11,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 
 class HistoryScreen extends StatefulWidget {
-  const HistoryScreen({super.key});
+  final bool showBottomNav;
+  final VoidCallback? onBackToHome;
+
+  const HistoryScreen({
+    super.key,
+    this.showBottomNav = false,
+    this.onBackToHome,
+  });
 
   @override
   State<HistoryScreen> createState() => _HistoryScreenState();
@@ -20,10 +27,33 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   // Track items that are being deleted to prevent multiple deletions
   final Set<int> _deletingItems = {};
+  int _currentBottomNavIndex = 2; // Start on Saved tab
 
   Future<void> openInChrome(String url) async {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _onBottomNavTap(int index) {
+    if (index == 0) {
+      // Navigate back to main Home tab
+      if (widget.onBackToHome != null) {
+        widget.onBackToHome!();
+      } else {
+        Navigator.pop(context);
+      }
+    } else if (index == 1) {
+      // Navigate back to main Watch tab
+      if (widget.onBackToHome != null) {
+        widget.onBackToHome!();
+      } else {
+        Navigator.pop(context);
+      }
+    } else {
+      setState(() {
+        _currentBottomNavIndex = index;
+      });
     }
   }
 
@@ -34,7 +64,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: !widget.showBottomNav,
+        leading: widget.showBottomNav
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  if (widget.onBackToHome != null) {
+                    widget.onBackToHome!();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
+              )
+            : null,
         backgroundColor: const Color(0xFF0066ff),
         title: Align(
           alignment: Alignment.centerLeft,
@@ -107,12 +149,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const Icon(Icons.settings, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
+                if (widget.showBottomNav) {
+                  // If we're in bottom nav mode, navigate back to main settings
+                  widget.onBackToHome?.call();
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                }
               },
               tooltip: localizations?.settings ?? 'Settings',
             ),
@@ -383,6 +430,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
           },
         ),
       ),
+      bottomNavigationBar: widget.showBottomNav
+          ? BottomNavigationBar(
+              currentIndex: _currentBottomNavIndex,
+              onTap: _onBottomNavTap,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.white,
+              selectedItemColor: const Color(0xFF0066ff),
+              unselectedItemColor: Colors.grey,
+              items: [
+                BottomNavigationBarItem(
+                  icon: ImageIcon(
+                    const AssetImage('assets/images/Home.png'),
+                    size: 24,
+                  ),
+                  label: localizations?.browserTab ?? 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: ImageIcon(
+                    const AssetImage('assets/images/Watch_Video.png'),
+                    size: 24,
+                  ),
+                  label: localizations?.watchTab ?? 'Watch',
+                ),
+                BottomNavigationBarItem(
+                  icon: ImageIcon(
+                    const AssetImage('assets/images/FileSave.png'),
+                    size: 24,
+                  ),
+                  label: localizations?.savedTab ?? 'Saved',
+                ),
+              ],
+            )
+          : null,
     );
   }
 

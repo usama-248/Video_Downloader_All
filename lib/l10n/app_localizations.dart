@@ -163,7 +163,7 @@ abstract class AppLocalizations {
   /// No description provided for @tipText.
   ///
   /// In en, this message translates to:
-  /// **'Try Facebook.com/videos'**
+  /// **'Try videos'**
   String get tipText;
 
   /// No description provided for @facebook.
@@ -190,7 +190,7 @@ abstract class AppLocalizations {
   /// **'History'**
   String get history;
 
-/// No description provided for @refresh.
+  /// No description provided for @refresh.
   ///
   /// In en, this message translates to:
   /// **'Refresh'**
@@ -303,7 +303,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change your languages'**
   String get languagesSubtitle;
-  
 
   /// No description provided for @communications.
   ///
@@ -416,7 +415,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding_title_2.
   ///
   /// In en, this message translates to:
-  /// **'Explore Facebook Videos'**
+  /// **'Explore Videos'**
   String get onboarding_title_2;
 
   /// No description provided for @onboarding_desc_2.
@@ -638,7 +637,7 @@ abstract class AppLocalizations {
   /// No description provided for @extract_video_id_error.
   ///
   /// In en, this message translates to:
-  /// **'Could not extract video ID. Make sure it\'s a valid Facebook video link.'**
+  /// **'Could not extract video ID. Make sure it\'s a valid  video link.'**
   String get extract_video_id_error;
 
   /// No description provided for @storage_permission_required.
@@ -680,7 +679,7 @@ abstract class AppLocalizations {
   /// No description provided for @step_1.
   ///
   /// In en, this message translates to:
-  /// **'Open Facebook and copy video link'**
+  /// **'Open App and copy video link'**
   String get step_1;
 
   /// No description provided for @step_2.
@@ -695,11 +694,11 @@ abstract class AppLocalizations {
   /// **'Tap Download to open video and save'**
   String get step_3;
 
-  /// No description provided for @open_facebook.
+  /// No description provided for .
   ///
   /// In en, this message translates to:
-  /// **'Open Facebook'**
-  String get open_facebook;
+  /// **'Open App'**
+  String get open_app;
 
   /// No description provided for @how_to_download_videos.
   ///
@@ -719,17 +718,11 @@ abstract class AppLocalizations {
   /// **'Watch Videos'**
   String get watch_videos;
 
-  /// No description provided for @watch_facebook_videos.
+  /// No description provided for @tap_below_to_open.
   ///
   /// In en, this message translates to:
-  /// **'Watch Facebook Videos'**
-  String get watch_facebook_videos;
-
-  /// No description provided for @tap_below_to_open_facebook.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap the button below to open Facebook and browse videos'**
-  String get tap_below_to_open_facebook;
+  /// **'Tap the button below to open  and browse videos'**
+  String get tap_below_to_open;
 
   /// No description provided for @tip_find_video.
   ///
@@ -743,11 +736,11 @@ abstract class AppLocalizations {
   /// **'Then go to Home tab and paste the link'**
   String get tip_paste_link;
 
-  /// No description provided for @facebook_video.
+  /// No description provided for @video.
   ///
   /// In en, this message translates to:
-  /// **'Facebook Video'**
-  String get facebook_video;
+  /// **'Video'**
+  String get video;
 
   /// No description provided for @full_hd_best_quality.
   ///
@@ -802,7 +795,8 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Watch'**
   String get watchTab;
-    /// No description provided for @need_help.
+
+  /// No description provided for @need_help.
   ///
   /// In en, this message translates to:
   /// **'Need Help?'**

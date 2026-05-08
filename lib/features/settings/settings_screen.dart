@@ -85,7 +85,16 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => HistoryScreen(
+                        showBottomNav: true,
+                        onBackToHome: () {
+                          // This will pop both HistoryScreen and SettingsScreen
+                          Navigator.pop(context); // Pop HistoryScreen
+                          Navigator.pop(context); // Pop SettingsScreen
+                        },
+                      ),
+                    ),
                   );
                 },
               ),
@@ -530,34 +539,33 @@ ${l10n?.appDescription ?? 'Enjoy downloading videos from Facebook easily!'}
     );
   }
 
- void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: Colors.white, // White background
-      title: Text(
-        l10n?.disclaimerTitle ?? 'Disclaimer',
-        style: const TextStyle(color: Colors.black), // Black title text
-      ),
-      content: SingleChildScrollView(
-        child: Text(
-          l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
-          style: const TextStyle(color: Colors.black), // Black content text
+  void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white, // White background
+        title: Text(
+          l10n?.disclaimerTitle ?? 'Disclaimer',
+          style: const TextStyle(color: Colors.black), // Black title text
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
+        content: SingleChildScrollView(
           child: Text(
-            l10n?.ok ?? 'OK',
-            style: const TextStyle(color: Colors.black), // Black button text
+            l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
+            style: const TextStyle(color: Colors.black), // Black content text
           ),
         ),
-      ],
-    ),
-  );
-}
-  
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              l10n?.ok ?? 'OK',
+              style: const TextStyle(color: Colors.black), // Black button text
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showAboutDialog(BuildContext context, AppLocalizations? l10n) {
     showDialog(

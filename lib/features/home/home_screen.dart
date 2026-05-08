@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -366,7 +365,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
     try {
       final metadata = await MetadataFetch.extract(url);
       setState(() {
-        _title = metadata?.title ?? 'Facebook Video';
+        _title = metadata?.title ?? 'Video Preview';
         _imageUrl = metadata?.image;
       });
     } catch (e) {
@@ -670,8 +669,8 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                                 children: [
                                   Text(
                                     _title ??
-                                        (localizations?.facebook_video ??
-                                            'Facebook Video'),
+                                        (localizations?.video ??
+                                            'Video Preview'),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -744,8 +743,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                       const SizedBox(height: 12),
                       _buildStep(
                         '1',
-                        localizations?.step_1 ??
-                            'Open Facebook and copy video link',
+                        localizations?.step_1 ?? 'Open and copy video link',
                       ),
                       const SizedBox(height: 8),
                       _buildStep(
@@ -782,7 +780,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                         Expanded(
                           child: Text(
                             localizations?.tipText ??
-                                '💡 Tip: Try Facebook.com/videos for best results',
+                                '💡 Tip: Try popular videos for best results',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.white,
@@ -1063,7 +1061,7 @@ class _WatchScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          localizations?.watch_facebook_videos ??
+                          localizations?.watch_videos ??
                               'Watch & Download Videos',
                           style: const TextStyle(
                             fontSize: 24,
@@ -1073,8 +1071,8 @@ class _WatchScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          localizations?.tap_below_to_open_facebook ??
-                              'Browse Facebook and save your favorite videos',
+                          localizations?.tap_below_to_open ??
+                              'Browse and save your favorite videos',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14,
@@ -1089,10 +1087,11 @@ class _WatchScreen extends StatelessWidget {
                               // Replace WebView with Chrome browser
                               openInChrome('https://www.facebook.com');
                             },
-                            icon: const Icon(Icons.facebook, size: 24),
+
                             label: Text(
-                              localizations?.open_facebook ?? 'Open Facebook',
+                              localizations?.open_app ?? 'Open App',
                               style: const TextStyle(fontSize: 16),
+                              
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
@@ -1181,8 +1180,8 @@ class _WatchScreen extends StatelessWidget {
                                 title: 'Find & Share',
                                 description:
                                     localizations?.step_1 ??
-                                    'Open Facebook, find a video you like, and tap the Share button',
-                                icon: Icons.facebook,
+                                    'Open ,find a video you like, and tap the Share button',
+                                icon: Icons.looks_one,
                                 color: const Color(0xFF1877F2),
                               ),
                               const SizedBox(height: 16),
@@ -1191,7 +1190,7 @@ class _WatchScreen extends StatelessWidget {
                                 title: 'Copy Link',
                                 description:
                                     'Select "Copy Link" from the share options',
-                                icon: Icons.link,
+                                icon: Icons.looks_two,
                                 color: const Color(0xFF34A853),
                               ),
                               const SizedBox(height: 16),
@@ -1201,7 +1200,7 @@ class _WatchScreen extends StatelessWidget {
                                 description:
                                     localizations?.step_2 ??
                                     'Go to Home tab, paste the link, and tap Download',
-                                icon: Icons.download,
+                                icon: Icons.looks_3,
                                 color: const Color(0xFF0066ff),
                               ),
                             ],

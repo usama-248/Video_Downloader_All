@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tip => '💡 Tip:';
 
   @override
-  String get tipText => 'Try Facebook.com/videos';
+  String get tipText => 'Try com/videos';
 
   @override
   String get facebook => 'Facebook';
@@ -165,7 +165,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'An all-in-one solution for organizing and managing your downloaded video collection with intuitive ease. Take control';
 
   @override
-  String get onboarding_title_2 => 'Explore Facebook Videos';
+  String get onboarding_title_2 => 'Explore Videos';
 
   @override
   String get onboarding_desc_2 =>
@@ -279,7 +279,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get extract_video_id_error =>
-      'Could not extract video ID. Make sure it\'s a valid Facebook video link.';
+      'Could not extract video ID. Make sure it\'s a valid  video link.';
 
   @override
   String get storage_permission_required => 'Storage permission required';
@@ -300,7 +300,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get how_to_download => 'How to download?';
 
   @override
-  String get step_1 => 'Open Facebook and copy video link';
+  String get step_1 => 'Open App and copy video link';
 
   @override
   String get step_2 => 'Paste link in the app and tap Get Video';
@@ -309,7 +309,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get step_3 => 'Tap Download to open video and save';
 
   @override
-  String get open_facebook => 'Open Facebook';
+  String get open_app => 'Open App';
 
   @override
   String get how_to_download_videos => 'How to download videos?';
@@ -320,12 +320,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get watch_videos => 'Watch Videos';
 
-  @override
-  String get watch_facebook_videos => 'Watch Facebook Videos';
+ 
 
   @override
-  String get tap_below_to_open_facebook =>
-      'Tap the button below to open Facebook and browse videos';
+  String get tap_below_to_open =>
+      'Tap the button below to open  and browse videos';
 
   @override
   String get tip_find_video => 'Tip: Find a video, tap share, then copy link';
@@ -334,7 +333,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tip_paste_link => 'Then go to Home tab and paste the link';
 
   @override
-  String get facebook_video => 'Facebook Video';
+  String get video => ' Video';
 
   @override
   String get full_hd_best_quality => 'Full HD • Best Quality';
@@ -459,7 +458,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get version => 'Version';
   @override
-  String get appDescription => 'Download and save videos from Facebook easily.';
+  String get appDescription => 'Download and save videos from easily.';
   @override
   String get giveUsReview => 'Give Us Review';
   @override

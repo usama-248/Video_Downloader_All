@@ -1392,7 +1392,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
           IconButton(
             icon: const Icon(Icons.open_in_browser, color: Colors.white),
             onPressed: () => openInChrome(widget.url),
-            tooltip: localizations?.open_facebook ?? 'Open in Browser',
+            tooltip: localizations?.open_app ?? 'Open in Browser',
           ),
           if (detectedVideoUrl != null && !_isDownloading)
             Stack(

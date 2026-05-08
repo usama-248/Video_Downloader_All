@@ -39,7 +39,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get tip => '💡 مشورہ:';
 
   @override
-  String get tipText => 'Facebook.com/videos آزمائیں';
+  String get tipText => 'com/videos آزمائیں';
 
   @override
   String get facebook => 'فیس بک';
@@ -312,7 +312,7 @@ class AppLocalizationsUr extends AppLocalizations {
       'ویڈیو کھولنے اور محفوظ کرنے کے لیے ڈاؤن لوڈ پر تھپتھپائیں';
 
   @override
-  String get open_facebook => 'فیس بک کھولیں';
+  String get open_app => 'ایپ کھولیں';
 
   @override
   String get how_to_download_videos => 'ویڈیوز کیسے ڈاؤن لوڈ کریں؟';
@@ -323,11 +323,10 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get watch_videos => 'ویڈیوز دیکھیں';
 
-  @override
-  String get watch_facebook_videos => 'فیس بک ویڈیوز دیکھیں';
+  
 
   @override
-  String get tap_below_to_open_facebook =>
+  String get tap_below_to_open =>
       'فیس بک کھولنے اور ویڈیوز براؤز کرنے کے لیے نیچے دیئے گئے بٹن پر تھپتھپائیں';
 
   @override
@@ -338,7 +337,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get tip_paste_link => 'پھر ہوم ٹیب پر جائیں اور لنک پیسٹ کریں';
 
   @override
-  String get facebook_video => 'فیس بک ویڈیو';
+  String get video => ' ویڈیو';
 
   @override
   String get full_hd_best_quality => 'مکمل ایچ ڈی • بہترین کوالٹی';
