@@ -78,6 +78,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 },
               )
             : null,
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: const Color(0xFF0066ff),
         title: Align(
           alignment: Alignment.centerLeft,

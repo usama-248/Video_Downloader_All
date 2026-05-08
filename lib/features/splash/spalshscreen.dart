@@ -141,7 +141,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Download Facebook videos\nfast and securely with our\nhassle-free video downloader.',
+                      'Download  Videos\nfast and securely with our\nhassle-free video downloader.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 14,

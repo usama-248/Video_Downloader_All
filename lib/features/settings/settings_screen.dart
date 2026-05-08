@@ -1,13 +1,12 @@
+
 // ignore_for_file: unused_element
 
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
-import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -153,7 +152,7 @@ class SettingsScreen extends StatelessWidget {
                 title: l10n?.shareApp ?? 'Share App',
                 subtitle:
                     l10n?.shareSubtitle ?? 'Share Video Downloader with others',
-                onTap: () => _showShareOptions(context, l10n),
+                onTap: () => _shareApp(context, l10n),
               ),
 
               _buildFeatureTile(
@@ -320,22 +319,26 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _launchReview(BuildContext context) {
-    final url = AppEnv.appStoreUrl;
+    const url =
+        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
     _launchURL(context, url, 'Could not open Play Store for review');
   }
 
   void _launchMoreApps(BuildContext context) {
-    final url = AppEnv.moreAppsUrl;
+    const url =
+        'https://play.google.com/store/apps/developer?id=FutureDial+Labs+LLC';
     _launchURL(context, url, 'Could not open More Apps');
   }
 
   void _launchTermsOfUse(BuildContext context) {
-    final url = AppEnv.termsOfUseUrl;
+    const url =
+        'https://docs.google.com/document/d/12WTnUBG0hlYkg5fRPIwxP4VnNkUhv_gnC19ulCfgHic/edit?tab=t.0#heading=h.yww4ag84enkv';
     _launchURL(context, url, 'Could not open Terms of Use');
   }
 
   void _launchPrivacyPolicy(BuildContext context) async {
-    final url = AppEnv.privacyPolicyUrl;
+    const url =
+        'https://sites.google.com/view/inverter-town-llc/privacy-policy';
     _launchURL(context, url, 'Could not open Privacy Policy');
   }
 
@@ -358,84 +361,16 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _launchFacebook(BuildContext context) {
-    final url = AppEnv.facebookBaseUrl;
+    const url = 'https://www.facebook.com';
     _launchURL(context, url, 'Could not open Facebook');
   }
 
-  // ====================== SHARE & DIALOG METHODS ======================
+  // ====================== SHARE FUNCTIONALITY ======================
 
-  void _showShareOptions(BuildContext context, AppLocalizations? l10n) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n?.shareApp ?? 'Share App',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.share, color: Colors.green),
-              ),
-              title: Text(l10n?.shareAppLink ?? 'Share App Link'),
-              onTap: () {
-                Navigator.pop(context);
-                _shareAppLink(context, l10n);
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.app_blocking_rounded,
-                  color: Colors.blue,
-                ),
-              ),
-              title: Text(l10n?.shareAPKFile ?? 'Share APK File'),
-              onTap: () {
-                Navigator.pop(context);
-                _shareAPKFile(context, l10n);
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.qr_code, color: Colors.orange),
-              ),
-              title: Text(l10n?.shareQRCode ?? 'Share QR Code'),
-              onTap: () {
-                Navigator.pop(context);
-                _showQRCode(context, l10n);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _shareAppLink(BuildContext context, AppLocalizations? l10n) {
-    final appLink = AppEnv.appStoreUrl;
+  // Simple share function that opens native share dialog
+  void _shareApp(BuildContext context, AppLocalizations? l10n) {
+    final appLink =
+        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
     final message =
         '''
 📱 Facebook Video Downloader App
@@ -448,106 +383,19 @@ ${l10n?.appDescription ?? 'Enjoy downloading videos from Facebook easily!'}
     Share.share(message);
   }
 
-  Future<void> _shareAPKFile(
-    BuildContext context,
-    AppLocalizations? l10n,
-  ) async {
-    if (await Permission.storage.isDenied) {
-      await Permission.storage.request();
-    }
-    _showShareAlternativeDialog(context, l10n);
-  }
-
-  void _showShareAlternativeDialog(
-    BuildContext context,
-    AppLocalizations? l10n,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n?.shareApp ?? 'Share App'),
-        content: Text(
-          l10n?.shareAppLinkMessage ?? 'Share the app link with your friends.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n?.cancel ?? 'Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _shareAppLink(context, l10n);
-            },
-            child: Text(l10n?.shareLink ?? 'Share Link'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showQRCode(BuildContext context, AppLocalizations? l10n) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n?.shareViaQRCode ?? 'Share via QR Code',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Icon(Icons.qr_code, size: 150, color: Colors.black),
-              const SizedBox(height: 20),
-              Text(l10n?.scanToDownload ?? 'Scan to download the app'),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(l10n?.close ?? 'Close'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _shareAppLink(context, l10n);
-                      },
-                      child: Text(l10n?.shareLink ?? 'Share Link'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white, // White background
+        backgroundColor: Colors.white,
         title: Text(
           l10n?.disclaimerTitle ?? 'Disclaimer',
-          style: const TextStyle(color: Colors.black), // Black title text
+          style: const TextStyle(color: Colors.black),
         ),
         content: SingleChildScrollView(
           child: Text(
             l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
-            style: const TextStyle(color: Colors.black), // Black content text
+            style: const TextStyle(color: Colors.black),
           ),
         ),
         actions: [
@@ -555,7 +403,7 @@ ${l10n?.appDescription ?? 'Enjoy downloading videos from Facebook easily!'}
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n?.ok ?? 'OK',
-              style: const TextStyle(color: Colors.black), // Black button text
+              style: const TextStyle(color: Colors.black),
             ),
           ),
         ],

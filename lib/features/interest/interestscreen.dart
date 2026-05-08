@@ -206,11 +206,13 @@ class _InterestScreenState extends State<InterestScreen> {
               : null,
           color: isSelected
               ? null
-              : const Color.fromARGB(255, 55, 42, 238).withOpacity(0.08),
+              : Color(0xFF0066ff), // Changed to black when unselected
           border: Border.all(
             color: isSelected
                 ? color
-                : const Color.fromARGB(255, 46, 45, 45).withOpacity(0.15),
+                : Color(
+                    0xFF0066ff,
+                  ).withOpacity(0.3), // Black border when unselected
             width: 1.2,
           ),
           boxShadow: isSelected
@@ -229,7 +231,9 @@ class _InterestScreenState extends State<InterestScreen> {
             Icon(
               interest['icon'] as IconData,
               size: 32,
-              color: isSelected ? Colors.white : color,
+              color: isSelected
+                  ? Colors.white
+                  : Colors.white, // Icon always white
             ),
             const SizedBox(height: 10),
             Text(
@@ -239,7 +243,7 @@ class _InterestScreenState extends State<InterestScreen> {
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color: isSelected
                     ? Colors.white
-                    : Colors.white.withOpacity(0.8),
+                    : Colors.white, // Text always white
               ),
               textAlign: TextAlign.center,
             ),
