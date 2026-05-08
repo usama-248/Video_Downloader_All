@@ -8,7 +8,7 @@
 PRODUCT_NAME = facebook_video_downloader
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.facebookVideoDownloader
+PRODUCT_BUNDLE_IDENTIFIER = com.FutureDialLabs.facebook.video.downloader
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 FutureDialLabs. All rights reserved.

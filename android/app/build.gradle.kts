@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.facebook_video_downloader"
+    namespace = "com.FutureDialLabs.facebook.video.downloader"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.facebook_video_downloader"
+        applicationId = "com.FutureDialLabs.facebook.video.downloader"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = 1

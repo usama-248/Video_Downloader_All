@@ -1,4 +1,4 @@
-package com.example.facebook_video_downloader
+package com.FutureDialLabs.facebook.video.downloader
 
 import android.os.Bundle
 import android.webkit.WebResourceRequest

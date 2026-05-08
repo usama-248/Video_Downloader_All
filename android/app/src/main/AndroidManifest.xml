@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.facebook_video_downloader">
+    package="com.FutureDialLabs.facebook.video.downloader">
     
     <!-- Add all permissions -->
     <uses-permission android:name="android.permission.INTERNET" />

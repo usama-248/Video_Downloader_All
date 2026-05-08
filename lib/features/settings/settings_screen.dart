@@ -311,7 +311,7 @@ class SettingsScreen extends StatelessWidget {
 
   void _launchReview(BuildContext context) {
     const url =
-        'https://play.google.com/store/apps/details?id=com.yourcompany.facebook_video_downloader';
+        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
     _launchURL(context, url, 'Could not open Play Store for review');
   }
 
@@ -430,7 +430,7 @@ class SettingsScreen extends StatelessWidget {
 
   void _shareAppLink(BuildContext context, AppLocalizations? l10n) {
     final appLink =
-        'https://play.google.com/store/apps/details?id=com.yourcompany.facebook_video_downloader';
+        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
     final message =
         '''
 📱 Facebook Video Downloader App
