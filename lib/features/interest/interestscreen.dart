@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:facebook_video_downloader/features/home/home_screen.dart';
 
+/// Brand blues and neutrals aligned with the app splash screen.
+const Color _kBrandBlue = Color(0xFF0066ff);
+const Color _kTextPrimary = Color(0xFF1F2937);
+const Color _kTextSecondary = Color(0xFF6B7280);
+
 class InterestScreen extends StatefulWidget {
   const InterestScreen({super.key});
 
@@ -68,9 +73,17 @@ class _InterestScreenState extends State<InterestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: Container(
-        decoration: BoxDecoration(),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _kBrandBlue.withValues(alpha: 0.09),
+              Colors.white,
+            ],
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -81,7 +94,7 @@ class _InterestScreenState extends State<InterestScreen> {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
-                  color: Color.fromARGB(255, 59, 70, 228),
+                  color: _kTextPrimary,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -90,7 +103,8 @@ class _InterestScreenState extends State<InterestScreen> {
                 'Please select two or more to proceed.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color.fromARGB(255, 59, 70, 228),
+                  color: _kTextSecondary,
+                  height: 1.4,
                 ),
               ),
               const SizedBox(height: 32),
@@ -128,40 +142,31 @@ class _InterestScreenState extends State<InterestScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    Container(
+                    SizedBox(
                       width: double.infinity,
                       height: 52,
-                      decoration: BoxDecoration(
-                        gradient: _selectedInterests.length >= 2
-                            ? LinearGradient(
-                                colors: [
-                                  Colors.blueAccent,
-                                  Colors.purpleAccent,
-                                ],
-                              )
-                            : null,
-                        color: _selectedInterests.length >= 2
-                            ? null
-                            : Colors.grey.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
                       child: ElevatedButton(
                         onPressed: _selectedInterests.length >= 2
                             ? () => _saveAndContinue()
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
+                          backgroundColor: _kBrandBlue,
+                          disabledBackgroundColor: Colors.grey.shade300,
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: _kTextSecondary,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         child: Text(
                           'Continue (${_selectedInterests.length}/2+)',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color.fromARGB(255, 59, 70, 228),
+                            color: _selectedInterests.length >= 2
+                                ? Colors.white
+                                : _kTextSecondary,
                           ),
                         ),
                       ),
@@ -172,7 +177,7 @@ class _InterestScreenState extends State<InterestScreen> {
                         'Select at least 2 interests to continue',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Color.fromARGB(255, 59, 70, 228),
+                          color: _kTextSecondary,
                         ),
                       ),
                   ],
@@ -201,29 +206,28 @@ class _InterestScreenState extends State<InterestScreen> {
               ? LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [color, color.withOpacity(0.7)],
+                  colors: [
+                    _kBrandBlue,
+                    Color.lerp(_kBrandBlue, color, 0.35)!,
+                  ],
                 )
               : null,
-          color: isSelected
-              ? null
-              : Color(0xFF0066ff), // Changed to black when unselected
+          color: isSelected ? null : Colors.white,
           border: Border.all(
             color: isSelected
-                ? color
-                : Color(
-                    0xFF0066ff,
-                  ).withOpacity(0.3), // Black border when unselected
-            width: 1.2,
+                ? _kBrandBlue.withValues(alpha: 0.85)
+                : const Color(0xFFE5E7EB),
+            width: isSelected ? 1.5 : 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ]
-              : [],
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? _kBrandBlue.withValues(alpha: 0.22)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: isSelected ? 12 : 6,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -231,9 +235,7 @@ class _InterestScreenState extends State<InterestScreen> {
             Icon(
               interest['icon'] as IconData,
               size: 32,
-              color: isSelected
-                  ? Colors.white
-                  : Colors.white, // Icon always white
+              color: isSelected ? Colors.white : color,
             ),
             const SizedBox(height: 10),
             Text(
@@ -241,9 +243,7 @@ class _InterestScreenState extends State<InterestScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : Colors.white, // Text always white
+                color: isSelected ? Colors.white : _kTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
