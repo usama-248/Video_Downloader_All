@@ -22,7 +22,8 @@ android {
 
     defaultConfig {
         applicationId = "com.FutureDialLabs.facebook.video.downloader"
-        minSdk = flutter.minSdkVersion
+        // FFmpeg Kit requires API 24+.
+        minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"

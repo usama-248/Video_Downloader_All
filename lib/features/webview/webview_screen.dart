@@ -3,12 +3,15 @@ import 'package:facebook_video_downloader/features/downloaders/download_controll
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -51,12 +54,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
   int _lastSpeedCalcBytes = 0;
   Timer? _speedTimer;
 
-  // Store the selected download size for consistent display
+  // Store the selected download size for consistent display (estimate on sheet / progress)
   String? _selectedDownloadSize;
 
-  // Track selected quality for border highlight
-  String? _selectedQuality;
-  String? _selectedQualityType; // 'HD', 'SD', 'Audio'
+  bool _downloadIsAudio = false;
+
+  /// SD / low-quality video download (for progress UI icon tint).
+  bool _downloadProgressIsSdVideo = false;
 
   @override
   void initState() {
@@ -100,8 +104,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
               _hdSize = null;
               _audioSize = null;
               _selectedDownloadSize = null;
-              _selectedQuality = null;
-              _selectedQualityType = null;
             });
           },
           onPageFinished: (String url) {
@@ -464,383 +466,46 @@ class _WebViewScreenState extends State<WebViewScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       isDismissible: true,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.play_circle_filled,
-                          color: Color(0xFF0066ff),
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
-                        Flexible(
-                          child: Text(
-                            localizations?.download_options ?? 'Download Video',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.video_library,
-                            color: Colors.blue.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              localizations?.video_detected_message ??
-                                  'Video detected! Choose download option',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.blue.shade700,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 16),
-
-                    _buildDownloadOptionCard(
-                      title: localizations?.high_quality ?? 'HD Video',
-                      size: _hdSize ?? 'Calculating...',
-                      icon: Icons.high_quality,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1e3c72), Color(0xFF2a5298)],
-                      ),
-                      color: Colors.blue,
-                      description: 'High Definition',
-                      isLoading: _isFetchingSizes && _hdSize == null,
-                      isSelected: _selectedQualityType == 'HD',
-                      onTap: () {
-                        setModalState(() {
-                          _selectedQualityType = 'HD';
-                          _selectedQuality = 'HD Video';
-                          _selectedDownloadSize = _hdSize;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    _buildDownloadOptionCard(
-                      title: localizations?.low_quality ?? 'SD Video',
-                      size: _sdSize ?? 'Calculating...',
-                      icon: Icons.sd_storage,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF757F9A), Color(0xFFD7DDE8)],
-                      ),
-                      color: Colors.grey,
-                      description: 'Standard Definition',
-                      isLoading: _isFetchingSizes && _sdSize == null,
-                      isSelected: _selectedQualityType == 'SD',
-                      onTap: () {
-                        setModalState(() {
-                          _selectedQualityType = 'SD';
-                          _selectedQuality = 'SD Video';
-                          _selectedDownloadSize = _sdSize;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    _buildDownloadOptionCard(
-                      title: localizations?.audio_only_title ?? 'Audio',
-                      size: _audioSize ?? 'Calculating...',
-                      icon: Icons.audiotrack,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
-                      ),
-                      color: Colors.green,
-                      description: 'MP3 • Audio Only',
-                      isLoading: _isFetchingSizes && _audioSize == null,
-                      isSelected: _selectedQualityType == 'Audio',
-                      onTap: () {
-                        setModalState(() {
-                          _selectedQualityType = 'Audio';
-                          _selectedQuality = 'MP3 Audio';
-                          _selectedDownloadSize = _audioSize;
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            icon: const Icon(Icons.play_arrow, size: 20),
-                            label: Text(
-                              'Watch',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF0066ff),
-                              side: const BorderSide(
-                                color: Color(0xFF0066ff),
-                                width: 2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed:
-                                _isFetchingSizes || _selectedQualityType == null
-                                ? null
-                                : () async {
-                                    Navigator.pop(context);
-                                    if (_selectedQualityType == 'Audio') {
-                                      await _extractAndDownloadAudio(
-                                        _audioSize,
-                                      );
-                                    } else {
-                                      await _downloadVideo(
-                                        _selectedQualityType ?? 'HD',
-                                        _selectedQualityType == 'HD'
-                                            ? _hdSize
-                                            : _sdSize,
-                                      );
-                                    }
-                                  },
-                            icon: const Icon(
-                              Icons.download,
-                              size: 20,
-                              color: Colors.white,
-                            ),
-                            label: Text(
-                              _selectedQualityType == null
-                                  ? 'Select Quality'
-                                  : 'Download ${_selectedQualityType}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0066ff),
-                              disabledBackgroundColor: Colors.grey.shade400,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              elevation: 0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            );
-          },
+      builder: (BuildContext sheetContext) {
+        return _DownloadQualityBottomSheet(
+          localizations: localizations,
+          isFetchingSizes: _isFetchingSizes,
+          hdSize: _hdSize,
+          sdSize: _sdSize,
+          audioSize: _audioSize,
+          onWatch: () => Navigator.pop(sheetContext),
+          onDownloadTier: _onDownloadTierSelected,
         );
       },
     );
   }
 
-  Widget _buildDownloadOptionCard({
-    required String title,
-    required String size,
-    required IconData icon,
-    required Gradient gradient,
-    required Color color,
-    required String description,
-    required bool isLoading,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade200,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.2),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (isLoading)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          color.withOpacity(0.6),
-                        ),
-                      ),
-                    )
-                  else
-                    Text(
-                      size,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected ? color : color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: isSelected
-                          ? Border.all(color: color, width: 1)
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: isSelected ? Colors.white : color,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isSelected ? 'Selected' : 'Select',
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  Future<void> _onDownloadTierSelected(
+    String tier,
+    String historyQualityLabel,
+    String? expectedSize,
+  ) async {
+    if (!mounted) return;
+    if (tier == 'Audio') {
+      await _extractAndDownloadAudio(historyQualityLabel, expectedSize);
+    } else {
+      await _downloadVideo(tier, historyQualityLabel, expectedSize);
+    }
   }
 
-  Future<void> _extractAndDownloadAudio(String? audioSize) async {
+  Future<void> _extractAndDownloadAudio(
+    String historyQualityLabel,
+    String? audioSize,
+  ) async {
     final localizations = AppLocalizations.of(context);
 
     if (detectedVideoUrl == null) return;
 
-    _resetProgressState('MP3 Audio', audioSize);
+    _resetProgressState(
+      historyQualityLabel,
+      expectedSize: audioSize,
+      isAudio: true,
+    );
     setState(() {
       _downloadStatus =
           localizations?.extracting_audio ?? 'Extracting audio from video...';
@@ -850,7 +515,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
     final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3';
 
     try {
-      final savePath = await _downloadAudioFile(detectedVideoUrl!, fileName);
+      final savePath = await _downloadAudioFile(
+        detectedVideoUrl!,
+        fileName,
+        historyQualityLabel,
+      );
       _stopSpeedTimer();
 
       if (savePath != null && mounted) {
@@ -872,7 +541,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
-  Future<String?> _downloadAudioFile(String url, String fileName) async {
+  Future<String?> _downloadAudioFile(
+    String url,
+    String fileName,
+    String historyQualityLabel,
+  ) async {
+    final localizations = AppLocalizations.of(context);
+
     try {
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 30);
@@ -880,39 +555,95 @@ class _WebViewScreenState extends State<WebViewScreen> {
       dio.options.headers = {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8',
+        'Accept': '*/*',
         'Referer': AppEnv.facebookReferer,
       };
 
-      String savePath;
+      final String savePath;
       if (Platform.isAndroid) {
         final musicDir = Directory('/storage/emulated/0/Music');
         if (await musicDir.exists()) {
-          savePath = '${musicDir.path}/$fileName';
+          savePath = path.join(musicDir.path, fileName);
         } else {
           final downloadsDir = Directory('/storage/emulated/0/Download');
-          savePath = '${downloadsDir.path}/$fileName';
+          savePath = path.join(downloadsDir.path, fileName);
         }
       } else {
         final directory = await getApplicationDocumentsDirectory();
-        savePath = '${directory.path}/$fileName';
+        savePath = path.join(directory.path, fileName);
       }
+
+      final tempDir = await getTemporaryDirectory();
+      final tempVideoPath = path.join(
+        tempDir.path,
+        'vd_audio_src_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
 
       await dio.download(
         url,
-        savePath,
+        tempVideoPath,
         onReceiveProgress: (received, total) {
           _updateProgress(received, total);
         },
       );
 
+      if (mounted) {
+        setState(() {
+          _downloadProgress = 0.0;
+          _totalKnown = false;
+          _downloadStatus =
+              localizations?.extracting ?? 'Converting to MP3...';
+        });
+      }
+
+      if (!(Platform.isAndroid || Platform.isIOS || Platform.isMacOS)) {
+        debugPrint(
+          'Audio extraction: FFmpeg is only bundled for Android, iOS, and macOS.',
+        );
+        try {
+          await File(tempVideoPath).delete();
+        } catch (_) {}
+        return null;
+      }
+
+      final session = await FFmpegKit.executeWithArguments([
+        '-y',
+        '-i',
+        tempVideoPath,
+        '-vn',
+        '-acodec',
+        'libmp3lame',
+        '-q:a',
+        '4',
+        savePath,
+      ]);
+      final returnCode = await session.getReturnCode();
+
+      try {
+        final tmp = File(tempVideoPath);
+        if (await tmp.exists()) await tmp.delete();
+      } catch (_) {}
+
+      if (!ReturnCode.isSuccess(returnCode)) {
+        try {
+          final out = File(savePath);
+          if (await out.exists()) await out.delete();
+        } catch (_) {}
+        debugPrint(
+          'FFmpeg MP3 conversion failed: ${await session.getOutput()}',
+        );
+        return null;
+      }
+
+      if (!mounted) return null;
       final downloadController = context.read<DownloadController>();
       await downloadController.addToHistory(
         fileName: fileName,
         filePath: savePath,
         videoUrl: url,
-        quality: 'MP3 Audio',
+        quality: historyQualityLabel,
       );
+      await downloadController.loadHistory();
 
       return savePath;
     } catch (e) {
@@ -921,13 +652,20 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
-  Future<void> _downloadVideo(String quality, String? expectedSize) async {
+  Future<void> _downloadVideo(
+    String quality,
+    String historyQualityLabel,
+    String? expectedSize,
+  ) async {
     final localizations = AppLocalizations.of(context);
 
     if (detectedVideoUrl == null) return;
 
-    final label = quality == 'HD' ? 'HD Video' : 'SD Video';
-    _resetProgressState(label, expectedSize);
+    _resetProgressState(
+      historyQualityLabel,
+      expectedSize: expectedSize,
+      isSdVideo: quality == 'SD',
+    );
     setState(() {
       _downloadStatus =
           localizations?.processing_link ?? 'Preparing download...';
@@ -961,9 +699,34 @@ class _WebViewScreenState extends State<WebViewScreen> {
                 'HD not available, downloading best available...';
           });
         }
+      } else if (quality == 'SD') {
+        setState(() {
+          _downloadStatus =
+              localizations?.processing_video ?? 'Searching for SD version...';
+        });
+
+        final sdUrl = await _findSdQualityVideo();
+        if (sdUrl.isNotEmpty && sdUrl.startsWith('http')) {
+          videoUrl = sdUrl;
+          if (mounted) {
+            setState(() {
+              _downloadStatus = sdUrl == detectedVideoUrl
+                  ? (localizations?.not_available_message ??
+                      'No separate SD link; downloading detected stream...')
+                  : ((localizations?.video_ready) ?? 'SD version found! Downloading...');
+            });
+          }
+        } else {
+          setState(() {
+            _downloadStatus =
+                localizations?.not_available_message ??
+                'SD not available, downloading best available...';
+          });
+        }
       }
 
-      final savePath = await _downloadFile(videoUrl, fileName, quality);
+      final savePath =
+          await _downloadFile(videoUrl, fileName, historyQualityLabel);
       _stopSpeedTimer();
 
       if (savePath != null && mounted) {
@@ -986,11 +749,18 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   /// Reset all progress trackers to zero — no estimated sizes leak through
-  void _resetProgressState(String qualityLabel, [String? expectedSize]) {
+  void _resetProgressState(
+    String qualityLabel, {
+    String? expectedSize,
+    bool isAudio = false,
+    bool isSdVideo = false,
+  }) {
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
       _downloadQualityLabel = qualityLabel;
+      _downloadIsAudio = isAudio;
+      _downloadProgressIsSdVideo = isSdVideo && !isAudio;
       _selectedDownloadSize = expectedSize;
       // ACTUAL download state — all zeroed
       _receivedBytes = 0;
@@ -1085,10 +855,80 @@ class _WebViewScreenState extends State<WebViewScreen> {
     return bestUrl;
   }
 
+  /// Resolves a lower-bitrate URL when the page exposes SD data attributes or
+  /// multiple [video]/[source] URLs (picks the lowest scored candidate).
+  Future<String> _findSdQualityVideo() async {
+    final fallback = detectedVideoUrl ?? '';
+
+    try {
+      final jsResult = await _controller.runJavaScriptReturningResult('''
+        (function() {
+          const sdElements = document.querySelectorAll('[data-sd-url], [data-quality-sd], [data-video-sd]');
+          for (const element of sdElements) {
+            const sdUrl = element.getAttribute('data-sd-url') ||
+                         element.getAttribute('data-quality-sd') ||
+                         element.getAttribute('data-video-sd');
+            if (sdUrl && sdUrl.startsWith('http')) return sdUrl;
+          }
+
+          function qualityScore(url) {
+            if (!url || !url.startsWith('http')) return -1;
+            const u = url.toLowerCase();
+            if (u.includes('144')) return 144;
+            if (u.includes('240')) return 240;
+            if (u.includes('270')) return 270;
+            if (u.includes('360')) return 360;
+            if (u.includes('sd') && u.includes('low')) return 350;
+            if (u.includes('low')) return 400;
+            if (u.includes('480')) return 480;
+            if (u.includes('540')) return 540;
+            if (u.includes('576')) return 576;
+            if (u.includes('720')) return 720;
+            if (u.includes('1080')) return 1080;
+            if (u.includes('hd')) return 650;
+            return 500;
+          }
+
+          let bestScore = 999999;
+          let bestUrl = '';
+
+          const videos = document.querySelectorAll('video');
+          for (const video of videos) {
+            const candidates = [];
+            if (video.src && video.src.startsWith('http')) candidates.push(video.src);
+            const sources = video.querySelectorAll('source');
+            for (const source of sources) {
+              if (source.src && source.src.startsWith('http')) candidates.push(source.src);
+            }
+            for (const u of candidates) {
+              const s = qualityScore(u);
+              if (s >= 0 && s < bestScore) {
+                bestScore = s;
+                bestUrl = u;
+              }
+            }
+          }
+          return bestUrl || '';
+        })();
+      ''');
+
+      if (jsResult != null) {
+        final s = jsResult.toString();
+        if (s.isNotEmpty && s != 'null' && s.startsWith('http')) {
+          return s;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error finding SD quality: $e');
+    }
+
+    return fallback;
+  }
+
   Future<String?> _downloadFile(
     String url,
     String fileName,
-    String quality,
+    String historyQualityLabel,
   ) async {
     try {
       final dio = Dio();
@@ -1123,12 +963,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
         },
       );
 
+      if (!mounted) return null;
       final downloadController = context.read<DownloadController>();
       await downloadController.addToHistory(
         fileName: fileName,
         filePath: savePath,
         videoUrl: url,
-        quality: quality,
+        quality: historyQualityLabel,
       );
 
       await downloadController.loadHistory();
@@ -1595,6 +1436,20 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                           color: Colors.black87,
                                         ),
                                       ),
+                                      if (_selectedDownloadSize !=
+                                          null &&
+                                          _selectedDownloadSize!
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '~ ${_selectedDownloadSize!}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                       const SizedBox(height: 2),
                                       Text(
                                         _downloadStatus,
@@ -1753,45 +1608,54 @@ class _WebViewScreenState extends State<WebViewScreen> {
                             // Row 4: Quality badge + Active
                             Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _downloadQualityLabel == 'MP3 Audio'
-                                        ? Colors.green.shade50
-                                        : Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _downloadQualityLabel == 'MP3 Audio'
-                                            ? Icons.audiotrack
-                                            : Icons.high_quality,
-                                        size: 12,
-                                        color:
-                                            _downloadQualityLabel == 'MP3 Audio'
-                                            ? Colors.green.shade600
-                                            : Colors.blue.shade600,
+                                Builder(
+                                  builder: (ctx) {
+                                    final Color tintBg;
+                                    final Color tintFg;
+                                    final IconData qIcon;
+                                    if (_downloadIsAudio) {
+                                      tintBg = Colors.green.shade50;
+                                      tintFg = Colors.green.shade700;
+                                      qIcon = Icons.audiotrack;
+                                    } else if (_downloadProgressIsSdVideo) {
+                                      tintBg = Colors.grey.shade100;
+                                      tintFg = Colors.grey.shade800;
+                                      qIcon = Icons.sd_storage;
+                                    } else {
+                                      tintBg = Colors.blue.shade50;
+                                      tintFg = Colors.blue.shade700;
+                                      qIcon = Icons.high_quality;
+                                    }
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        _downloadQualityLabel,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color:
-                                              _downloadQualityLabel ==
-                                                  'MP3 Audio'
-                                              ? Colors.green.shade700
-                                              : Colors.blue.shade700,
-                                        ),
+                                      decoration: BoxDecoration(
+                                        color: tintBg,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                    ],
-                                  ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            qIcon,
+                                            size: 12,
+                                            color: tintFg.withOpacity(0.88),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _downloadQualityLabel,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: tintFg,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                                 const Spacer(),
                                 Container(
@@ -1867,6 +1731,428 @@ class _WebViewScreenState extends State<WebViewScreen> {
           setState(() {});
         }
       },
+    );
+  }
+}
+
+typedef _DownloadTierChosen = Future<void> Function(
+  String tier,
+  String historyQualityLabel,
+  String? expectedSize,
+);
+
+class _DownloadQualityBottomSheet extends StatefulWidget {
+  final AppLocalizations? localizations;
+  final bool isFetchingSizes;
+  final String? hdSize;
+  final String? sdSize;
+  final String? audioSize;
+  final VoidCallback onWatch;
+  final _DownloadTierChosen onDownloadTier;
+
+  const _DownloadQualityBottomSheet({
+    required this.localizations,
+    required this.isFetchingSizes,
+    required this.hdSize,
+    required this.sdSize,
+    required this.audioSize,
+    required this.onWatch,
+    required this.onDownloadTier,
+  });
+
+  @override
+  State<_DownloadQualityBottomSheet> createState() =>
+      _DownloadQualityBottomSheetState();
+}
+
+class _DownloadQualityBottomSheetState extends State<_DownloadQualityBottomSheet> {
+  static const String _kHd = 'HD';
+  static const String _kSd = 'SD';
+  static const String _kAudio = 'Audio';
+
+  String? _picked;
+
+  String _historyLabel(String tier) {
+    final l = widget.localizations;
+    switch (tier) {
+      case _kHd:
+        return l?.high_quality ?? 'High Quality';
+      case _kSd:
+        return l?.low_quality ?? 'Low Quality';
+      case _kAudio:
+        return l?.audio_only_title ?? 'Audio Only';
+      default:
+        return tier;
+    }
+  }
+
+  String? _estimateForTier(String tier) {
+    switch (tier) {
+      case _kHd:
+        return widget.hdSize;
+      case _kSd:
+        return widget.sdSize;
+      case _kAudio:
+        return widget.audioSize;
+      default:
+        return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.localizations;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Icon(
+                  Icons.play_circle_filled,
+                  color: Color(0xFF0066ff),
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    l10n?.download_options ?? 'Download Video',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.video_library,
+                    color: Colors.blue.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l10n?.video_detected_message ??
+                          'Video detected! Choose download option',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 16),
+            _DownloadTierOptionCard(
+              title: l10n?.high_quality ?? 'High Quality',
+              size: widget.hdSize ?? 'Calculating...',
+              icon: Icons.high_quality,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1e3c72), Color(0xFF2a5298)],
+              ),
+              color: Colors.blue,
+              description:
+                  l10n?.full_hd_best_quality ?? 'High Definition',
+              isLoading: widget.isFetchingSizes && widget.hdSize == null,
+              isSelected: _picked == _kHd,
+              onTap: () => setState(() => _picked = _kHd),
+            ),
+            const SizedBox(height: 12),
+            _DownloadTierOptionCard(
+              title: l10n?.low_quality ?? 'Low Quality',
+              size: widget.sdSize ?? 'Calculating...',
+              icon: Icons.sd_storage,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF757F9A), Color(0xFFD7DDE8)],
+              ),
+              color: Colors.grey,
+              description:
+                  l10n?.standard_quality ?? 'Standard Definition',
+              isLoading: widget.isFetchingSizes && widget.sdSize == null,
+              isSelected: _picked == _kSd,
+              onTap: () => setState(() => _picked = _kSd),
+            ),
+            const SizedBox(height: 12),
+            _DownloadTierOptionCard(
+              title: l10n?.audio_only_title ?? 'Audio Only',
+              size: widget.audioSize ?? 'Calculating...',
+              icon: Icons.audiotrack,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+              ),
+              color: Colors.green,
+              description: '${l10n?.mp3_128kbps ?? 'MP3'} • '
+                  '${l10n?.audio_only_title ?? 'Audio Only'}',
+              isLoading:
+                  widget.isFetchingSizes && widget.audioSize == null,
+              isSelected: _picked == _kAudio,
+              onTap: () => setState(() => _picked = _kAudio),
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: widget.onWatch,
+                    icon: const Icon(Icons.play_arrow, size: 20),
+                    label: Text(
+                      l10n?.watchVideo ?? 'Watch',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0066ff),
+                      side: const BorderSide(
+                        color: Color(0xFF0066ff),
+                        width: 2,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: widget.isFetchingSizes || _picked == null
+                        ? null
+                        : () async {
+                            final tier = _picked!;
+                            final label = _historyLabel(tier);
+                            final hint = _estimateForTier(tier);
+                            Navigator.pop(context);
+                            await widget.onDownloadTier(
+                              tier,
+                              label,
+                              hint,
+                            );
+                          },
+                    icon: const Icon(
+                      Icons.download,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      _picked == null
+                          ? 'Select quality'
+                          : '${l10n?.download ?? 'Download'} '
+                                '${_historyLabel(_picked!)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0066ff),
+                      disabledBackgroundColor: Colors.grey.shade400,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DownloadTierOptionCard extends StatelessWidget {
+  final String title;
+  final String size;
+  final IconData icon;
+  final Gradient gradient;
+  final Color color;
+  final String description;
+  final bool isLoading;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DownloadTierOptionCard({
+    required this.title,
+    required this.size,
+    required this.icon,
+    required this.gradient,
+    required this.color,
+    required this.description,
+    required this.isLoading,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade200,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: gradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (isLoading)
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(
+                          color.withOpacity(0.6),
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      size,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? color : color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: isSelected
+                          ? Border.all(color: color, width: 1)
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: isSelected ? Colors.white : color,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isSelected ? 'Selected' : 'Select',
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
