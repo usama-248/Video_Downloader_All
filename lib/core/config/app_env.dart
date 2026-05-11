@@ -25,6 +25,12 @@ class AppEnv {
     'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader',
   );
 
+  /// Play Store listing with reviews (Give us review).
+  static String get rateUsUrl => _value('RATE_US_URL', appStoreUrl);
+
+  /// Link included when the user taps Share App.
+  static String get shareAppUrl => _value('SHARE_APP_URL', appStoreUrl);
+
   static String get moreAppsUrl => _value(
     'MORE_APPS_URL',
     'https://play.google.com/store/apps/developer?id=FutureDial+Labs+LLC',

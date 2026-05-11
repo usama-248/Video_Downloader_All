@@ -34,7 +34,7 @@
     </queries>
     
     <application
-        android:label="Video Downloader"
+        android:label="Facebook Video Downloader App"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">
