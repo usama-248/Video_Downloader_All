@@ -396,9 +396,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '${localizations?.quality ?? 'Quality'}: ${item['quality']} | ${localizations?.small_size ?? 'Size'}: ${item['fileSize']}',
+                                  '${localizations?.quality ?? 'Quality'}: ${item['quality']} | '
+                                  'Size: ${item['fileSize']}', // Shows popup/estimated size
                                   style: const TextStyle(color: Colors.black54),
                                 ),
+                                if (item['actualFileSize'] != null &&
+                                    item['actualFileSize'] != item['fileSize'])
+                                  Text(
+                                    'Actual: ${item['actualFileSize']}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black38,
+                                    ),
+                                  ),
                                 Text(
                                   _formatDate(item['dateTime'], localizations),
                                   style: const TextStyle(

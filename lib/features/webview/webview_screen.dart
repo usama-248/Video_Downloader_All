@@ -1,4 +1,5 @@
-// ignore_for_file: unnecessary_null_comparison, unused_field
+
+// ignore_for_file: unused_element, unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
@@ -38,29 +39,36 @@ class _WebViewScreenState extends State<WebViewScreen> {
   String? _lastDownloadedFileName;
   bool _showAutoPopup = true;
 
-  // File sizes for popup cards (estimated from HEAD request)
-  String? _sdSize;
-  String? _hdSize;
-  String? _audioSize;
+  // File sizes for different qualities
+  String? _size1080p;
+  String? _size720p;
+  String? _size480p;
+  String? _size360p;
+  String? _size144p;
+  String? _audioSize128kbps;
+  String? _audioSize192kbps;
+  String? _audioSize320kbps;
   bool _isFetchingSizes = false;
 
   // ACTUAL download progress tracking from the real download stream
   int _receivedBytes = 0;
-  int _actualTotalBytes = 0; // real total from server during download
-  bool _totalKnown = false; // whether server sent Content-Length
+  int _actualTotalBytes = 0;
+  bool _totalKnown = false;
   String _downloadSpeed = '0 KB/s';
   String _downloadQualityLabel = '';
   DateTime? _lastSpeedCalcTime;
   int _lastSpeedCalcBytes = 0;
   Timer? _speedTimer;
 
-  // Store the selected download size for consistent display (estimate on sheet / progress)
+  // Store the selected download size for consistent display
   String? _selectedDownloadSize;
+  String? _selectedDownloadQuality;
 
   bool _downloadIsAudio = false;
+  bool _downloadProgressIsLowQuality = false;
 
-  /// SD / low-quality video download (for progress UI icon tint).
-  bool _downloadProgressIsSdVideo = false;
+  // Store selected audio bitrate
+  String? _selectedAudioBitrate;
 
   @override
   void initState() {
@@ -100,10 +108,16 @@ class _WebViewScreenState extends State<WebViewScreen> {
               _errorMessage = null;
               _isVideoDetected = false;
               detectedVideoUrl = null;
-              _sdSize = null;
-              _hdSize = null;
-              _audioSize = null;
+              _size1080p = null;
+              _size720p = null;
+              _size480p = null;
+              _size360p = null;
+              _size144p = null;
+              _audioSize128kbps = null;
+              _audioSize192kbps = null;
+              _audioSize320kbps = null;
               _selectedDownloadSize = null;
+              _selectedDownloadQuality = null;
             });
           },
           onPageFinished: (String url) {
@@ -237,7 +251,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
     });
   }
 
-  // Only used for the popup card estimates, NOT for download progress
   Future<void> _fetchFileSizes(String videoUrl) async {
     setState(() => _isFetchingSizes = true);
 
@@ -257,65 +270,57 @@ class _WebViewScreenState extends State<WebViewScreen> {
         final contentLength = response.headers.value('content-length');
         if (contentLength != null) {
           final bytes = int.parse(contentLength);
+
+          // Calculate approximate video duration (rough estimate)
+          // Assuming average bitrate of 2-5 Mbps for video
+          // Average ~3.5 Mbps = 437,500 bytes per second
+          final estimatedDurationSeconds = bytes / 437500;
+          final estimatedDurationMinutes = estimatedDurationSeconds / 60;
+
           setState(() {
-            _hdSize = _formatFileSize(bytes);
-            _sdSize = _formatFileSize((bytes * 0.5).round());
+            // Map quality to estimated sizes based on the original file
+            _size1080p = _formatFileSize(bytes);
+            _size720p = _formatFileSize((bytes * 0.7).round());
+            _size480p = _formatFileSize((bytes * 0.45).round());
+            _size360p = _formatFileSize((bytes * 0.3).round());
+            _size144p = _formatFileSize((bytes * 0.12).round());
+
+            // Audio sizes based on bitrate and duration
+            // 128kbps = 16 KB per second = 960 KB per minute
+            // 320kbps = 40 KB per second = 2400 KB per minute
+            final audioSize128Bytes =
+                (estimatedDurationSeconds * 128 * 1024 / 8).round();
+            final audioSize320Bytes =
+                (estimatedDurationSeconds * 320 * 1024 / 8).round();
+
+            _audioSize128kbps = _formatFileSize(audioSize128Bytes);
+            _audioSize320kbps = _formatFileSize(audioSize320Bytes);
           });
+        } else {
+          _setDefaultSizes();
         }
       } catch (e) {
-        debugPrint('Error fetching HD size: $e');
-      }
-
-      if (_hdSize != null) {
-        setState(() {
-          _audioSize = _formatFileSize(
-            (_parseSizeToBytes(_hdSize!) * 0.12).round(),
-          );
-        });
-      }
-
-      try {
-        final jsResult = await _controller.runJavaScriptReturningResult('''
-          (function() {
-            const elements = document.querySelectorAll('[data-sd-url], [data-quality-sd], [data-video-sd]');
-            for (const element of elements) {
-              const sdUrl = element.getAttribute('data-sd-url') ||
-                           element.getAttribute('data-quality-sd') ||
-                           element.getAttribute('data-video-sd');
-              if (sdUrl && sdUrl.startsWith('http')) {
-                return sdUrl;
-              }
-            }
-            return '';
-          })();
-        ''');
-
-        if (jsResult != null &&
-            jsResult.toString().isNotEmpty &&
-            jsResult.toString() != 'null' &&
-            jsResult.toString() != '' &&
-            jsResult.toString().startsWith('http')) {
-          final sdResponse = await dio.head(jsResult.toString());
-          final sdContentLength = sdResponse.headers.value('content-length');
-          if (sdContentLength != null) {
-            setState(() {
-              _sdSize = _formatFileSize(int.parse(sdContentLength));
-            });
-          }
-        }
-      } catch (e) {
-        debugPrint('Error fetching SD size: $e');
+        debugPrint('Error fetching file sizes: $e');
+        _setDefaultSizes();
       }
     } catch (e) {
       debugPrint('Error fetching file sizes: $e');
-      setState(() {
-        _hdSize = null;
-        _sdSize = null;
-        _audioSize = null;
-      });
+      _setDefaultSizes();
     } finally {
       setState(() => _isFetchingSizes = false);
     }
+  }
+
+  void _setDefaultSizes() {
+    setState(() {
+      _size1080p = '~50 MB';
+      _size720p = '~35 MB';
+      _size480p = '~22 MB';
+      _size360p = '~15 MB';
+      _size144p = '~6 MB';
+      _audioSize128kbps = '~5 MB';
+      _audioSize320kbps = '~12 MB';
+    });
   }
 
   String _formatFileSize(int bytes) {
@@ -326,26 +331,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
-
-  int _parseSizeToBytes(String sizeStr) {
-    final regex = RegExp(r'([\d.]+)\s*(B|KB|MB|GB)');
-    final match = regex.firstMatch(sizeStr);
-    if (match != null) {
-      final value = double.parse(match.group(1)!);
-      final unit = match.group(2);
-      switch (unit) {
-        case 'B':
-          return value.round();
-        case 'KB':
-          return (value * 1024).round();
-        case 'MB':
-          return (value * 1024 * 1024).round();
-        case 'GB':
-          return (value * 1024 * 1024 * 1024).round();
-      }
-    }
-    return 0;
   }
 
   void _startSpeedTimer() {
@@ -385,20 +370,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
     _speedTimer = null;
   }
 
-  /// Uses ONLY actual bytes from the download stream, never estimated card sizes
   void _updateProgress(int received, int total) {
     _receivedBytes = received;
 
-    // Only trust the total if server actually sent Content-Length (> 0 and not -1)
     if (total > 0 && total != -1) {
       _actualTotalBytes = total;
       _totalKnown = true;
       _downloadProgress = (received / total).clamp(0.0, 1.0);
 
-      // Build status text showing ETA only, no file size
       String statusText = '';
-
-      // Calculate ETA
       final remaining = _actualTotalBytes - _receivedBytes;
       if (remaining > 0 &&
           _downloadSpeed != '0 KB/s' &&
@@ -420,7 +400,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
         _downloadStatus = statusText;
       });
     } else {
-      // Server didn't send Content-Length — total is unknown
       _totalKnown = false;
       setState(() {
         _downloadStatus = 'Downloading...';
@@ -470,9 +449,14 @@ class _WebViewScreenState extends State<WebViewScreen> {
         return _DownloadQualityBottomSheet(
           localizations: localizations,
           isFetchingSizes: _isFetchingSizes,
-          hdSize: _hdSize,
-          sdSize: _sdSize,
-          audioSize: _audioSize,
+          size1080p: _size1080p,
+          size720p: _size720p,
+          size480p: _size480p,
+          size360p: _size360p,
+          size144p: _size144p,
+          audioSize128kbps: _audioSize128kbps,
+          audioSize192kbps: _audioSize192kbps,
+          audioSize320kbps: _audioSize320kbps,
           onWatch: () => Navigator.pop(sheetContext),
           onDownloadTier: _onDownloadTierSelected,
         );
@@ -486,8 +470,24 @@ class _WebViewScreenState extends State<WebViewScreen> {
     String? expectedSize,
   ) async {
     if (!mounted) return;
-    if (tier == 'Audio') {
-      await _extractAndDownloadAudio(historyQualityLabel, expectedSize);
+
+    // Store the selected quality and expected size for display
+    setState(() {
+      _selectedDownloadQuality = historyQualityLabel;
+      _selectedDownloadSize = expectedSize;
+    });
+
+    if (tier.startsWith('Audio_')) {
+      // Extract bitrate from tier (e.g., "Audio_128" -> "128")
+      final bitrate = tier.split('_')[1];
+      setState(() {
+        _selectedAudioBitrate = bitrate;
+      });
+      await _extractAndDownloadAudio(
+        historyQualityLabel,
+        expectedSize,
+        bitrate,
+      );
     } else {
       await _downloadVideo(tier, historyQualityLabel, expectedSize);
     }
@@ -496,6 +496,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   Future<void> _extractAndDownloadAudio(
     String historyQualityLabel,
     String? audioSize,
+    String bitrate, // Add bitrate parameter
   ) async {
     final localizations = AppLocalizations.of(context);
 
@@ -512,13 +513,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
     });
     _startSpeedTimer();
 
-    final fileName = 'audio_${DateTime.now().millisecondsSinceEpoch}.mp3';
+    final fileName =
+        'audio_${DateTime.now().millisecondsSinceEpoch}_${bitrate}kbps.mp3';
 
     try {
       final savePath = await _downloadAudioFile(
         detectedVideoUrl!,
         fileName,
         historyQualityLabel,
+        bitrate,
       );
       _stopSpeedTimer();
 
@@ -545,6 +548,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     String url,
     String fileName,
     String historyQualityLabel,
+    String bitrate, // Add bitrate parameter
   ) async {
     final localizations = AppLocalizations.of(context);
 
@@ -591,8 +595,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         setState(() {
           _downloadProgress = 0.0;
           _totalKnown = false;
-          _downloadStatus =
-              localizations?.extracting ?? 'Converting to MP3...';
+          _downloadStatus = localizations?.extracting ?? 'Converting to MP3...';
         });
       }
 
@@ -606,6 +609,21 @@ class _WebViewScreenState extends State<WebViewScreen> {
         return null;
       }
 
+      // Set audio quality based on bitrate
+      // For libmp3lame, -q:a 0 is highest quality (320kbps), -q:a 2 is ~190kbps, -q:a 4 is ~128kbps
+      String audioQuality;
+      switch (bitrate) {
+        case '320':
+          audioQuality = '0'; // Best quality ~320kbps
+          break;
+
+        case '128':
+          audioQuality = '4'; // Good quality ~128kbps
+          break;
+        default:
+          audioQuality = '4';
+      }
+
       final session = await FFmpegKit.executeWithArguments([
         '-y',
         '-i',
@@ -614,7 +632,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         '-acodec',
         'libmp3lame',
         '-q:a',
-        '4',
+        audioQuality,
         savePath,
       ]);
       final returnCode = await session.getReturnCode();
@@ -637,11 +655,18 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
       if (!mounted) return null;
       final downloadController = context.read<DownloadController>();
+
+      // Get actual file size
+      final savedFile = File(savePath);
+      final actualSizeBytes = await savedFile.length();
+
       await downloadController.addToHistory(
         fileName: fileName,
         filePath: savePath,
         videoUrl: url,
         quality: historyQualityLabel,
+        actualFileSizeBytes: actualSizeBytes,
+        estimatedSize: _selectedDownloadSize,
       );
       await downloadController.loadHistory();
 
@@ -661,10 +686,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
     if (detectedVideoUrl == null) return;
 
+    bool isLowQuality = quality == '144p' || quality == '360p';
     _resetProgressState(
       historyQualityLabel,
       expectedSize: expectedSize,
-      isSdVideo: quality == 'SD',
+      isLowQuality: isLowQuality,
     );
     setState(() {
       _downloadStatus =
@@ -678,55 +704,25 @@ class _WebViewScreenState extends State<WebViewScreen> {
     try {
       String videoUrl = detectedVideoUrl!;
 
-      if (quality == 'HD') {
+      final qualityUrl = await _findQualityVideo(quality);
+      if (qualityUrl.isNotEmpty && qualityUrl.startsWith('http')) {
+        videoUrl = qualityUrl;
+        setState(() {
+          _downloadStatus = '${quality} version found! Downloading...';
+        });
+      } else {
         setState(() {
           _downloadStatus =
-              localizations?.processing_video ?? 'Searching for HD version...';
+              localizations?.not_available_message ??
+              '$quality not available, downloading best available...';
         });
-
-        final betterUrl = await _findBestQualityVideo();
-        if (betterUrl != videoUrl) {
-          videoUrl = betterUrl;
-          setState(() {
-            _downloadStatus =
-                localizations?.video_ready ??
-                'HD version found! Downloading...';
-          });
-        } else {
-          setState(() {
-            _downloadStatus =
-                localizations?.not_available_message ??
-                'HD not available, downloading best available...';
-          });
-        }
-      } else if (quality == 'SD') {
-        setState(() {
-          _downloadStatus =
-              localizations?.processing_video ?? 'Searching for SD version...';
-        });
-
-        final sdUrl = await _findSdQualityVideo();
-        if (sdUrl.isNotEmpty && sdUrl.startsWith('http')) {
-          videoUrl = sdUrl;
-          if (mounted) {
-            setState(() {
-              _downloadStatus = sdUrl == detectedVideoUrl
-                  ? (localizations?.not_available_message ??
-                      'No separate SD link; downloading detected stream...')
-                  : ((localizations?.video_ready) ?? 'SD version found! Downloading...');
-            });
-          }
-        } else {
-          setState(() {
-            _downloadStatus =
-                localizations?.not_available_message ??
-                'SD not available, downloading best available...';
-          });
-        }
       }
 
-      final savePath =
-          await _downloadFile(videoUrl, fileName, historyQualityLabel);
+      final savePath = await _downloadFile(
+        videoUrl,
+        fileName,
+        historyQualityLabel,
+      );
       _stopSpeedTimer();
 
       if (savePath != null && mounted) {
@@ -748,21 +744,19 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
-  /// Reset all progress trackers to zero — no estimated sizes leak through
   void _resetProgressState(
     String qualityLabel, {
     String? expectedSize,
     bool isAudio = false,
-    bool isSdVideo = false,
+    bool isLowQuality = false,
   }) {
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
       _downloadQualityLabel = qualityLabel;
       _downloadIsAudio = isAudio;
-      _downloadProgressIsSdVideo = isSdVideo && !isAudio;
+      _downloadProgressIsLowQuality = isLowQuality && !isAudio;
       _selectedDownloadSize = expectedSize;
-      // ACTUAL download state — all zeroed
       _receivedBytes = 0;
       _actualTotalBytes = 0;
       _totalKnown = false;
@@ -770,71 +764,74 @@ class _WebViewScreenState extends State<WebViewScreen> {
     });
   }
 
-  Future<String> _findBestQualityVideo() async {
-    String bestUrl = detectedVideoUrl!;
+  Future<String> _findQualityVideo(String quality) async {
+    String bestUrl = '';
 
     try {
+      final qualityNum = quality.replaceAll('p', '');
+
       final jsResult = await _controller.runJavaScriptReturningResult('''
         (function() {
-          let bestUrl = '';
-          let bestQuality = 0;
+          let bestMatchUrl = '';
+          let qualityScore = 0;
+          const targetQuality = $qualityNum;
 
           const videos = document.querySelectorAll('video');
           for (const video of videos) {
             if (video.src && video.src.startsWith('http')) {
-              let quality = 0;
-              if (video.src.includes('1080') || video.src.includes('hd') ||
-                  video.src.includes('high') || video.src.includes('original')) {
-                quality = 1080;
-              } else if (video.src.includes('720')) {
-                quality = 720;
-              } else if (video.src.includes('480')) {
-                quality = 480;
-              } else if (video.src.includes('360')) {
-                quality = 360;
-              } else {
-                quality = 480;
-              }
-
-              if (quality > bestQuality) {
-                bestQuality = quality;
-                bestUrl = video.src;
+              let q = 0;
+              if (video.src.includes('1080') || video.src.includes('original')) q = 1080;
+              else if (video.src.includes('720')) q = 720;
+              else if (video.src.includes('480')) q = 480;
+              else if (video.src.includes('360')) q = 360;
+              else if (video.src.includes('240')) q = 240;
+              else if (video.src.includes('144')) q = 144;
+              
+              if (q === targetQuality) return video.src;
+              if (q > 0 && (bestMatchUrl === '' || Math.abs(q - targetQuality) < Math.abs(qualityScore - targetQuality))) {
+                bestMatchUrl = video.src;
+                qualityScore = q;
               }
             }
 
             const sources = video.querySelectorAll('source');
             for (const source of sources) {
               if (source.src && source.src.startsWith('http')) {
-                let quality = 0;
-                if (source.src.includes('1080') || source.src.includes('hd')) {
-                  quality = 1080;
-                } else if (source.src.includes('720')) {
-                  quality = 720;
-                } else if (source.src.includes('480')) {
-                  quality = 480;
-                } else if (source.src.includes('360')) {
-                  quality = 360;
-                }
-
-                if (quality > bestQuality) {
-                  bestQuality = quality;
-                  bestUrl = source.src;
+                let q = 0;
+                if (source.src.includes('1080')) q = 1080;
+                else if (source.src.includes('720')) q = 720;
+                else if (source.src.includes('480')) q = 480;
+                else if (source.src.includes('360')) q = 360;
+                else if (source.src.includes('240')) q = 240;
+                else if (source.src.includes('144')) q = 144;
+                
+                if (q === targetQuality) return source.src;
+                if (q > 0 && (bestMatchUrl === '' || Math.abs(q - targetQuality) < Math.abs(qualityScore - targetQuality))) {
+                  bestMatchUrl = source.src;
+                  qualityScore = q;
                 }
               }
             }
           }
 
-          const elements = document.querySelectorAll('[data-hd-url], [data-quality-hd], [data-video-hd]');
-          for (const element of elements) {
-            const hdUrl = element.getAttribute('data-hd-url') ||
-                         element.getAttribute('data-quality-hd') ||
-                         element.getAttribute('data-video-hd');
-            if (hdUrl && hdUrl.startsWith('http')) {
-              return hdUrl;
+          const qualitySelectors = {
+            '1080': ['[data-1080p-url]', '[data-uhd-url]', '[data-fhd-url]'],
+            '720': ['[data-720p-url]', '[data-hd-url]'],
+            '480': ['[data-480p-url]', '[data-sd-url]'],
+            '360': ['[data-360p-url]'],
+            '144': ['[data-144p-url]']
+          };
+          
+          const selectors = qualitySelectors[targetQuality.toString()] || [];
+          for (const selector of selectors) {
+            const elements = document.querySelectorAll(selector);
+            for (const element of elements) {
+              const url = element.getAttribute(selector.replace(/[\[\]]/g, ''));
+              if (url && url.startsWith('http')) return url;
             }
           }
 
-          return bestUrl || '';
+          return bestMatchUrl;
         })();
       ''');
 
@@ -844,85 +841,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
           jsResult.toString() != '') {
         String foundUrl = jsResult.toString();
         if (foundUrl.startsWith('http')) {
-          debugPrint('Found better quality URL: $foundUrl');
+          debugPrint('Found $quality URL: $foundUrl');
           return foundUrl;
         }
       }
     } catch (e) {
-      debugPrint('Error finding better quality: $e');
+      debugPrint('Error finding $quality quality video: $e');
     }
 
-    return bestUrl;
-  }
-
-  /// Resolves a lower-bitrate URL when the page exposes SD data attributes or
-  /// multiple [video]/[source] URLs (picks the lowest scored candidate).
-  Future<String> _findSdQualityVideo() async {
-    final fallback = detectedVideoUrl ?? '';
-
-    try {
-      final jsResult = await _controller.runJavaScriptReturningResult('''
-        (function() {
-          const sdElements = document.querySelectorAll('[data-sd-url], [data-quality-sd], [data-video-sd]');
-          for (const element of sdElements) {
-            const sdUrl = element.getAttribute('data-sd-url') ||
-                         element.getAttribute('data-quality-sd') ||
-                         element.getAttribute('data-video-sd');
-            if (sdUrl && sdUrl.startsWith('http')) return sdUrl;
-          }
-
-          function qualityScore(url) {
-            if (!url || !url.startsWith('http')) return -1;
-            const u = url.toLowerCase();
-            if (u.includes('144')) return 144;
-            if (u.includes('240')) return 240;
-            if (u.includes('270')) return 270;
-            if (u.includes('360')) return 360;
-            if (u.includes('sd') && u.includes('low')) return 350;
-            if (u.includes('low')) return 400;
-            if (u.includes('480')) return 480;
-            if (u.includes('540')) return 540;
-            if (u.includes('576')) return 576;
-            if (u.includes('720')) return 720;
-            if (u.includes('1080')) return 1080;
-            if (u.includes('hd')) return 650;
-            return 500;
-          }
-
-          let bestScore = 999999;
-          let bestUrl = '';
-
-          const videos = document.querySelectorAll('video');
-          for (const video of videos) {
-            const candidates = [];
-            if (video.src && video.src.startsWith('http')) candidates.push(video.src);
-            const sources = video.querySelectorAll('source');
-            for (const source of sources) {
-              if (source.src && source.src.startsWith('http')) candidates.push(source.src);
-            }
-            for (const u of candidates) {
-              const s = qualityScore(u);
-              if (s >= 0 && s < bestScore) {
-                bestScore = s;
-                bestUrl = u;
-              }
-            }
-          }
-          return bestUrl || '';
-        })();
-      ''');
-
-      if (jsResult != null) {
-        final s = jsResult.toString();
-        if (s.isNotEmpty && s != 'null' && s.startsWith('http')) {
-          return s;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error finding SD quality: $e');
-    }
-
-    return fallback;
+    return bestUrl.isEmpty ? detectedVideoUrl! : bestUrl;
   }
 
   Future<String?> _downloadFile(
@@ -964,17 +891,25 @@ class _WebViewScreenState extends State<WebViewScreen> {
       );
 
       if (!mounted) return null;
+
+      final savedFile = File(savePath);
+      final actualSizeBytes = await savedFile.length();
+
       final downloadController = context.read<DownloadController>();
       await downloadController.addToHistory(
         fileName: fileName,
         filePath: savePath,
         videoUrl: url,
         quality: historyQualityLabel,
+        actualFileSizeBytes: actualSizeBytes,
+        estimatedSize: _selectedDownloadSize,
       );
 
       await downloadController.loadHistory();
 
-      debugPrint('✅ Download completed and saved to history: $fileName');
+      debugPrint(
+        '✅ Download completed: $fileName (Actual size: ${_formatFileSize(actualSizeBytes)})',
+      );
 
       return savePath;
     } catch (e) {
@@ -987,8 +922,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
     String fileName,
     String filePath, {
     bool isAudio = false,
-  }) {
+  }) async {
     final localizations = AppLocalizations.of(context);
+
+    // Get actual file size
+    final actualFile = File(filePath);
+    final actualSizeBytes = await actualFile.length();
+    final actualSizeStr = _formatFileSize(actualSizeBytes);
 
     showDialog(
       context: context,
@@ -1041,7 +981,60 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Estimated Size:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            _selectedDownloadSize ?? 'Unknown',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Actual Size:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          Text(
+                            actualSizeStr,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0066ff),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1398,7 +1391,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Row 1: Icon + Title + Percentage
                             Row(
                               children: [
                                 Container(
@@ -1436,8 +1428,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                           color: Colors.black87,
                                         ),
                                       ),
-                                      if (_selectedDownloadSize !=
-                                          null &&
+                                      if (_selectedDownloadSize != null &&
                                           _selectedDownloadSize!
                                               .isNotEmpty) ...[
                                         const SizedBox(height: 2),
@@ -1461,7 +1452,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                     ],
                                   ),
                                 ),
-                                // Percentage — real from stream, or spinner if unknown
                                 _totalKnown
                                     ? Container(
                                         padding: const EdgeInsets.symmetric(
@@ -1500,10 +1490,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                       ),
                               ],
                             ),
-
                             const SizedBox(height: 16),
-
-                            // Row 2: Speed only - no file size information
                             Row(
                               children: [
                                 Expanded(
@@ -1538,10 +1525,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                 ),
                               ],
                             ),
-
                             const SizedBox(height: 14),
-
-                            // Row 3: Progress bar
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Stack(
@@ -1590,7 +1574,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                       ),
                                     )
                                   else
-                                    // Indeterminate shimmer bar when total unknown
                                     Container(
                                       height: 10,
                                       width: double.infinity,
@@ -1602,10 +1585,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                 ],
                               ),
                             ),
-
                             const SizedBox(height: 14),
-
-                            // Row 4: Quality badge + Active
                             Row(
                               children: [
                                 Builder(
@@ -1617,7 +1597,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                                       tintBg = Colors.green.shade50;
                                       tintFg = Colors.green.shade700;
                                       qIcon = Icons.audiotrack;
-                                    } else if (_downloadProgressIsSdVideo) {
+                                    } else if (_downloadProgressIsLowQuality) {
                                       tintBg = Colors.grey.shade100;
                                       tintFg = Colors.grey.shade800;
                                       qIcon = Icons.sd_storage;
@@ -1705,7 +1685,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
     );
   }
 
-  /// Animated indeterminate progress bar for when total size is unknown
   Widget _buildIndeterminateBar() {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: -1.0, end: 2.0),
@@ -1735,27 +1714,38 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 }
 
-typedef _DownloadTierChosen = Future<void> Function(
-  String tier,
-  String historyQualityLabel,
-  String? expectedSize,
-);
+typedef _DownloadTierChosen =
+    Future<void> Function(
+      String tier,
+      String historyQualityLabel,
+      String? expectedSize,
+    );
 
 class _DownloadQualityBottomSheet extends StatefulWidget {
   final AppLocalizations? localizations;
   final bool isFetchingSizes;
-  final String? hdSize;
-  final String? sdSize;
-  final String? audioSize;
+  final String? size1080p;
+  final String? size720p;
+  final String? size480p;
+  final String? size360p;
+  final String? size144p;
+  final String? audioSize128kbps;
+  final String? audioSize192kbps;
+  final String? audioSize320kbps;
   final VoidCallback onWatch;
   final _DownloadTierChosen onDownloadTier;
 
   const _DownloadQualityBottomSheet({
     required this.localizations,
     required this.isFetchingSizes,
-    required this.hdSize,
-    required this.sdSize,
-    required this.audioSize,
+    required this.size1080p,
+    required this.size720p,
+    required this.size480p,
+    required this.size360p,
+    required this.size144p,
+    required this.audioSize128kbps,
+    required this.audioSize192kbps,
+    required this.audioSize320kbps,
     required this.onWatch,
     required this.onDownloadTier,
   });
@@ -1765,22 +1755,38 @@ class _DownloadQualityBottomSheet extends StatefulWidget {
       _DownloadQualityBottomSheetState();
 }
 
-class _DownloadQualityBottomSheetState extends State<_DownloadQualityBottomSheet> {
-  static const String _kHd = 'HD';
-  static const String _kSd = 'SD';
-  static const String _kAudio = 'Audio';
+// Updated _DownloadQualityBottomSheet with only 128kbps and 320kbps options
+// Also fixed audio size calculation
+
+class _DownloadQualityBottomSheetState
+    extends State<_DownloadQualityBottomSheet> {
+  static const String _k1080p = '1080p';
+  static const String _k720p = '720p';
+  static const String _k480p = '480p';
+  static const String _k360p = '360p';
+  static const String _k144p = '144p';
+  static const String _kAudio128 = 'Audio_128';
+  static const String _kAudio320 = 'Audio_320';
 
   String? _picked;
 
   String _historyLabel(String tier) {
     final l = widget.localizations;
     switch (tier) {
-      case _kHd:
-        return l?.high_quality ?? 'High Quality';
-      case _kSd:
-        return l?.low_quality ?? 'Low Quality';
-      case _kAudio:
-        return l?.audio_only_title ?? 'Audio Only';
+      case _k1080p:
+        return '1080p (Full HD)';
+      case _k720p:
+        return '720p (HD)';
+      case _k480p:
+        return '480p (SD)';
+      case _k360p:
+        return '360p';
+      case _k144p:
+        return '144p';
+      case _kAudio128:
+        return 'MP3 128kbps';
+      case _kAudio320:
+        return 'MP3 320kbps';
       default:
         return tier;
     }
@@ -1788,16 +1794,26 @@ class _DownloadQualityBottomSheetState extends State<_DownloadQualityBottomSheet
 
   String? _estimateForTier(String tier) {
     switch (tier) {
-      case _kHd:
-        return widget.hdSize;
-      case _kSd:
-        return widget.sdSize;
-      case _kAudio:
-        return widget.audioSize;
+      case _k1080p:
+        return widget.size1080p;
+      case _k720p:
+        return widget.size720p;
+      case _k480p:
+        return widget.size480p;
+      case _k360p:
+        return widget.size360p;
+      case _k144p:
+        return widget.size144p;
+      case _kAudio128:
+        return widget.audioSize128kbps;
+      case _kAudio320:
+        return widget.audioSize320kbps;
       default:
         return null;
     }
   }
+
+  bool _isSelected(String tier) => _picked == tier;
 
   @override
   Widget build(BuildContext context) {
@@ -1875,50 +1891,157 @@ class _DownloadQualityBottomSheetState extends State<_DownloadQualityBottomSheet
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 16),
+
+            // Video Quality Section Title
+            Padding(
+              padding: const EdgeInsets.only(left: 8, bottom: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.video_settings,
+                    size: 18,
+                    color: Colors.blue.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Video Quality',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
             _DownloadTierOptionCard(
-              title: l10n?.high_quality ?? 'High Quality',
-              size: widget.hdSize ?? 'Calculating...',
+              title: '1080p',
+              subtitle: 'Full HD • Best Quality',
+              size: widget.size1080p ?? 'Calculating...',
               icon: Icons.high_quality,
               gradient: const LinearGradient(
                 colors: [Color(0xFF1e3c72), Color(0xFF2a5298)],
               ),
               color: Colors.blue,
-              description:
-                  l10n?.full_hd_best_quality ?? 'High Definition',
-              isLoading: widget.isFetchingSizes && widget.hdSize == null,
-              isSelected: _picked == _kHd,
-              onTap: () => setState(() => _picked = _kHd),
+              isLoading: widget.isFetchingSizes && widget.size1080p == null,
+              isSelected: _isSelected(_k1080p),
+              onTap: () => setState(() => _picked = _k1080p),
             ),
             const SizedBox(height: 12),
+
             _DownloadTierOptionCard(
-              title: l10n?.low_quality ?? 'Low Quality',
-              size: widget.sdSize ?? 'Calculating...',
+              title: '720p',
+              subtitle: 'HD • High Quality',
+              size: widget.size720p ?? 'Calculating...',
+              icon: Icons.high_quality,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
+              ),
+              color: Colors.cyan,
+              isLoading: widget.isFetchingSizes && widget.size720p == null,
+              isSelected: _isSelected(_k720p),
+              onTap: () => setState(() => _picked = _k720p),
+            ),
+            const SizedBox(height: 12),
+
+            _DownloadTierOptionCard(
+              title: '480p',
+              subtitle: 'SD • Medium Quality',
+              size: widget.size480p ?? 'Calculating...',
               icon: Icons.sd_storage,
               gradient: const LinearGradient(
                 colors: [Color(0xFF757F9A), Color(0xFFD7DDE8)],
               ),
               color: Colors.grey,
-              description:
-                  l10n?.standard_quality ?? 'Standard Definition',
-              isLoading: widget.isFetchingSizes && widget.sdSize == null,
-              isSelected: _picked == _kSd,
-              onTap: () => setState(() => _picked = _kSd),
+              isLoading: widget.isFetchingSizes && widget.size480p == null,
+              isSelected: _isSelected(_k480p),
+              onTap: () => setState(() => _picked = _k480p),
             ),
             const SizedBox(height: 12),
+
             _DownloadTierOptionCard(
-              title: l10n?.audio_only_title ?? 'Audio Only',
-              size: widget.audioSize ?? 'Calculating...',
+              title: '360p',
+              subtitle: 'Low Quality • Good for slow connections',
+              size: widget.size360p ?? 'Calculating...',
+              icon: Icons.sd_storage,
+              gradient: const LinearGradient(
+                colors: [Color.fromARGB(255, 69, 86, 99), Color(0xFFEEF2F3)],
+              ),
+              color: Color.fromARGB(255, 69, 86, 99),
+              isLoading: widget.isFetchingSizes && widget.size360p == null,
+              isSelected: _isSelected(_k360p),
+              onTap: () => setState(() => _picked = _k360p),
+            ),
+            const SizedBox(height: 12),
+
+            _DownloadTierOptionCard(
+              title: '144p',
+              subtitle: 'Very Low Quality • Smallest size',
+              size: widget.size144p ?? 'Calculating...',
+              icon: Icons.sd_storage,
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB9937A), Color(0xFFD4C5B0)],
+              ),
+              color: Colors.brown,
+              isLoading: widget.isFetchingSizes && widget.size144p == null,
+              isSelected: _isSelected(_k144p),
+              onTap: () => setState(() => _picked = _k144p),
+            ),
+            const SizedBox(height: 20),
+
+            // Audio Quality Section Title
+            Padding(
+              padding: const EdgeInsets.only(left: 8, bottom: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.audio_file,
+                    size: 18,
+                    color: Colors.green.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Audio Quality (MP3)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            _DownloadTierOptionCard(
+              title: 'MP3 128kbps',
+              subtitle: 'Good Quality • Balanced file size',
+              size: widget.audioSize128kbps ?? 'Calculating...',
               icon: Icons.audiotrack,
               gradient: const LinearGradient(
                 colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
               ),
               color: Colors.green,
-              description: '${l10n?.mp3_128kbps ?? 'MP3'} • '
-                  '${l10n?.audio_only_title ?? 'Audio Only'}',
               isLoading:
-                  widget.isFetchingSizes && widget.audioSize == null,
-              isSelected: _picked == _kAudio,
-              onTap: () => setState(() => _picked = _kAudio),
+                  widget.isFetchingSizes && widget.audioSize128kbps == null,
+              isSelected: _isSelected(_kAudio128),
+              onTap: () => setState(() => _picked = _kAudio128),
+            ),
+            const SizedBox(height: 12),
+
+            _DownloadTierOptionCard(
+              title: 'MP3 320kbps',
+              subtitle: 'Best Quality • Largest file size',
+              size: widget.audioSize320kbps ?? 'Calculating...',
+              icon: Icons.audiotrack,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0b5e0b), Color(0xFF2e7d32)],
+              ),
+              color: Colors.green,
+              isLoading:
+                  widget.isFetchingSizes && widget.audioSize320kbps == null,
+              isSelected: _isSelected(_kAudio320),
+              onTap: () => setState(() => _picked = _kAudio320),
             ),
             const SizedBox(height: 24),
             const Divider(),
@@ -1959,11 +2082,7 @@ class _DownloadQualityBottomSheetState extends State<_DownloadQualityBottomSheet
                             final label = _historyLabel(tier);
                             final hint = _estimateForTier(tier);
                             Navigator.pop(context);
-                            await widget.onDownloadTier(
-                              tier,
-                              label,
-                              hint,
-                            );
+                            await widget.onDownloadTier(tier, label, hint);
                           },
                     icon: const Icon(
                       Icons.download,
@@ -2004,22 +2123,22 @@ class _DownloadQualityBottomSheetState extends State<_DownloadQualityBottomSheet
 
 class _DownloadTierOptionCard extends StatelessWidget {
   final String title;
+  final String subtitle;
   final String size;
   final IconData icon;
   final Gradient gradient;
   final Color color;
-  final String description;
   final bool isLoading;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _DownloadTierOptionCard({
     required this.title,
+    required this.subtitle,
     required this.size,
     required this.icon,
     required this.gradient,
     required this.color,
-    required this.description,
     required this.isLoading,
     required this.isSelected,
     required this.onTap,
@@ -2078,11 +2197,11 @@ class _DownloadTierOptionCard extends StatelessWidget {
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      description,
+                      subtitle,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: Colors.grey.shade500,
                       ),
                     ),
@@ -2098,8 +2217,7 @@ class _DownloadTierOptionCard extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(
+                        valueColor: AlwaysStoppedAnimation<Color>(
                           color.withOpacity(0.6),
                         ),
                       ),
@@ -2108,7 +2226,7 @@ class _DownloadTierOptionCard extends StatelessWidget {
                     Text(
                       size,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: color,
                       ),
@@ -2120,8 +2238,7 @@ class _DownloadTierOptionCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          isSelected ? color : color.withOpacity(0.1),
+                      color: isSelected ? color : color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: isSelected
                           ? Border.all(color: color, width: 1)
