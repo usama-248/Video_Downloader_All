@@ -1,6 +1,6 @@
-
 // ignore_for_file: unused_element
 
+import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
@@ -138,21 +138,20 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () => _launchReview(context),
               ),
               _buildFeatureTile(
+                icon: Icons.share,
+                iconColor: Colors.orange,
+                title: l10n?.shareApp ?? 'Share App',
+                subtitle:
+                    l10n?.shareSubtitle ?? 'Share Video Downloader with others',
+                onTap: () => _shareApp(),
+              ),
+              _buildFeatureTile(
                 icon: Icons.apps_rounded,
                 iconColor: Colors.purple,
                 title: l10n?.moreApps ?? 'More Apps',
                 subtitle:
                     l10n?.discoverOurApps ?? 'Discover our other applications',
                 onTap: () => _launchMoreApps(context),
-              ),
-
-              _buildFeatureTile(
-                icon: Icons.share,
-                iconColor: Colors.orange,
-                title: l10n?.shareApp ?? 'Share App',
-                subtitle:
-                    l10n?.shareSubtitle ?? 'Share Video Downloader with others',
-                onTap: () => _shareApp(context, l10n),
               ),
 
               _buildFeatureTile(
@@ -319,27 +318,27 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _launchReview(BuildContext context) {
-    const url =
-        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
-    _launchURL(context, url, 'Could not open Play Store for review');
+    _launchURL(
+      context,
+      AppEnv.rateUsUrl,
+      'Could not open Play Store for review',
+    );
   }
 
   void _launchMoreApps(BuildContext context) {
-    const url =
-        'https://play.google.com/store/apps/developer?id=FutureDial+Labs+LLC';
-    _launchURL(context, url, 'Could not open More Apps');
+    _launchURL(context, AppEnv.moreAppsUrl, 'Could not open More Apps');
   }
 
   void _launchTermsOfUse(BuildContext context) {
-    const url =
-        'https://docs.google.com/document/d/12WTnUBG0hlYkg5fRPIwxP4VnNkUhv_gnC19ulCfgHic/edit?tab=t.0#heading=h.yww4ag84enkv';
-    _launchURL(context, url, 'Could not open Terms of Use');
+    _launchURL(context, AppEnv.termsOfUseUrl, 'Could not open Terms of Use');
   }
 
-  void _launchPrivacyPolicy(BuildContext context) async {
-    const url =
-        'https://sites.google.com/view/inverter-town-llc/privacy-policy';
-    _launchURL(context, url, 'Could not open Privacy Policy');
+  void _launchPrivacyPolicy(BuildContext context) {
+    _launchURL(
+      context,
+      AppEnv.privacyPolicyUrl,
+      'Could not open Privacy Policy',
+    );
   }
 
   void _showErrorDialog(BuildContext context, String message) {
@@ -367,20 +366,8 @@ class SettingsScreen extends StatelessWidget {
 
   // ====================== SHARE FUNCTIONALITY ======================
 
-  // Simple share function that opens native share dialog
-  void _shareApp(BuildContext context, AppLocalizations? l10n) {
-    final appLink =
-        'https://play.google.com/store/apps/details?id=com.FutureDialLabs.facebook.video.downloader';
-    final message =
-        '''
-📱 Facebook Video Downloader App
-
-${l10n?.downloadNow ?? 'Download now'}: $appLink
-
-${l10n?.appDescription ?? 'Enjoy downloading videos from Facebook easily!'}
-    ''';
-
-    Share.share(message);
+  void _shareApp() {
+    Share.share(AppEnv.shareAppUrl);
   }
 
   void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
