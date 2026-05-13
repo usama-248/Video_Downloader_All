@@ -1,5 +1,3 @@
-
-
 // ignore_for_file: unused_local_variable, unused_element, unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
@@ -19,11 +17,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-// Add your Ad Unit IDs here
+// Add your REAL Ad Unit IDs here
 const String rewardedAdUnitId =
-    'ca-app-pub-3940256099942544/5224354917'; // Test rewarded ad unit ID
+    'ca-app-pub-3605518487927639/1811413333'; // REAL Rewarded ad unit ID
 const String interstitialAdUnitIdForDownload =
-    'ca-app-pub-3940256099942544/1033173712'; // Test interstitial ad unit ID
+    'ca-app-pub-3605518487927639/3124495001'; // REAL Interstitial ad unit ID
 
 class WebViewScreen extends StatefulWidget {
   final String url;

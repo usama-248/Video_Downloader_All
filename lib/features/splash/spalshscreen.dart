@@ -1,14 +1,12 @@
-
-
 import 'package:facebook_video_downloader/features/onboarding/screens/onboarding_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-// Add your App Open Ad unit ID here
+// Add your REAL App Open Ad unit ID here
 const String appOpenAdUnitId =
-    'ca-app-pub-3940256099942544/9257395921'; // Test App Open Ad unit ID - Replace with your actual ad unit ID
+    'ca-app-pub-3605518487927639/7526774448'; // REAL App Open Ad unit ID
 
 class SplashScreen extends StatefulWidget {
   final bool isReturningUser;

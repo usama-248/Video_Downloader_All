@@ -1,5 +1,3 @@
-
-
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
@@ -14,9 +12,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:io';
 
-// Add your AdMob ad unit ID for history screen
+// Add your AdMob ad unit ID for history screen - USING REAL AD UNIT ID
 const String historyScreenBannerAdUnitId =
-    'ca-app-pub-3940256099942544/6300978111'; // Test banner ad unit ID - Replace with your actual ad unit ID
+    'ca-app-pub-3605518487927639/8115755781'; // Your real banner ad unit ID
 
 class HistoryScreen extends StatefulWidget {
   final bool showBottomNav;

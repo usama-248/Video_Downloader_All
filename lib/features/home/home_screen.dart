@@ -16,15 +16,19 @@ import '../history/history_screen.dart';
 import '../premium/premium_screen.dart';
 import '../settings/settings_screen.dart';
 
-// Add your AdMob ad unit IDs here
+// Add your REAL AdMob ad unit IDs here
 const String bannerAdUnitId =
-    'ca-app-pub-3940256099942544/6300978111'; // Test banner ad unit ID
+    'ca-app-pub-3605518487927639/8115755781'; // Real banner ad unit ID
 const String mrecAdUnitId =
-    'ca-app-pub-3940256099942544/6300978111'; // Test MREC ad unit ID
+    'ca-app-pub-3605518487927639/6802674114'; // Real MREC ad unit ID
 const String watchScreenBannerAdUnitId =
-    'ca-app-pub-3940256099942544/6300978111'; // Test banner ad unit ID for Watch screen
+    'ca-app-pub-3605518487927639/8115755781'; // Real banner ad unit ID for Watch screen
 const String interstitialAdUnitId =
-    'ca-app-pub-3940256099942544/1033173712'; // Test interstitial ad unit ID
+    'ca-app-pub-3605518487927639/3124495001'; // Real interstitial ad unit ID
+const String appOpenAdUnitId =
+    'ca-app-pub-3605518487927639/7526774448'; // Real app open ad unit ID
+const String rewardedAdUnitId =
+    'ca-app-pub-3605518487927639/1811413333'; // Real rewarded ad unit ID
 
 Future<void> openInChrome(String url) async {
   final Uri uri = Uri.parse(url);
