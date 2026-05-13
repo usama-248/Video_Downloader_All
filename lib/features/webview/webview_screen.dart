@@ -1,4 +1,3 @@
-
 // ignore_for_file: unused_element, unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
@@ -16,6 +15,11 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+// Add your Rewarded Ad unit ID here
+const String rewardedAdUnitId =
+    'ca-app-pub-3940256099942544/5224354917'; // Test rewarded ad unit ID
 
 class WebViewScreen extends StatefulWidget {
   final String url;
@@ -38,6 +42,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
   String? _lastDownloadedFilePath;
   String? _lastDownloadedFileName;
   bool _showAutoPopup = true;
+
+  // Rewarded Ad variables
+  RewardedAd? _rewardedAd;
+  bool _isRewardedAdLoaded = false;
+  String? _pendingFilePath;
+  String? _pendingFileName;
+  bool _isAudioPending = false;
 
   // File sizes for different qualities
   String? _size1080p;
@@ -75,11 +86,82 @@ class _WebViewScreenState extends State<WebViewScreen> {
     super.initState();
     _requestPermissions();
     _initWebView();
+    _loadRewardedAd();
+  }
+
+  void _loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: rewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+          _isRewardedAdLoaded = true;
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _loadRewardedAd(); // Load next ad
+              _isRewardedAdLoaded = false;
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+              _loadRewardedAd(); // Load next ad
+              _isRewardedAdLoaded = false;
+              // Still navigate to history even if ad fails
+              if (_pendingFilePath != null) {
+                _navigateToHistory();
+              }
+            },
+          );
+          setState(() {});
+        },
+        onAdFailedToLoad: (error) {
+          print('RewardedAd failed to load: $error');
+          _isRewardedAdLoaded = false;
+        },
+      ),
+    );
+  }
+
+  void _showRewardedAdForHistory(
+    String filePath,
+    String fileName,
+    bool isAudio,
+  ) {
+    _pendingFilePath = filePath;
+    _pendingFileName = fileName;
+    _isAudioPending = isAudio;
+
+    if (_isRewardedAdLoaded && _rewardedAd != null) {
+      _rewardedAd!.show(
+        onUserEarnedReward: (ad, reward) {
+          print('User earned reward: ${reward.amount} ${reward.type}');
+          // Reward earned, navigate to history
+          _navigateToHistory();
+        },
+      );
+    } else {
+      // If ad not loaded, still allow navigation
+      print('Rewarded ad not ready, navigating without reward');
+      _navigateToHistory();
+    }
+  }
+
+  void _navigateToHistory() {
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const HistoryScreen()),
+      );
+    }
+    _pendingFilePath = null;
+    _pendingFileName = null;
   }
 
   @override
   void dispose() {
     _speedTimer?.cancel();
+    _rewardedAd?.dispose();
     super.dispose();
   }
 
@@ -1103,11 +1185,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HistoryScreen(),
-                            ),
+                          // Show rewarded ad before navigating to history
+                          _showRewardedAdForHistory(
+                            filePath,
+                            fileName,
+                            isAudio,
                           );
                         },
                         style: ElevatedButton.styleFrom(

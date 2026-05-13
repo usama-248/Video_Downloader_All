@@ -1,31 +1,39 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:metadata_fetch/metadata_fetch.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
-import 'package:url_launcher/url_launcher.dart'; // Add this import
+import 'package:url_launcher/url_launcher.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../webview/webview_screen.dart';
 import '../history/history_screen.dart';
 import '../premium/premium_screen.dart';
 import '../settings/settings_screen.dart';
 
-// Add this function outside of any class or inside a utility class
+// Add your AdMob ad unit IDs here
+const String bannerAdUnitId =
+    'ca-app-pub-3940256099942544/6300978111'; // Test banner ad unit ID
+const String mrecAdUnitId =
+    'ca-app-pub-3940256099942544/6300978111'; // Test MREC ad unit ID
+const String watchScreenBannerAdUnitId =
+    'ca-app-pub-3940256099942544/6300978111'; // Test banner ad unit ID for Watch screen
+const String interstitialAdUnitId =
+    'ca-app-pub-3940256099942544/1033173712'; // Test interstitial ad unit ID
+
 Future<void> openInChrome(String url) async {
   final Uri uri = Uri.parse(url);
   try {
     if (await canLaunchUrl(uri)) {
-      await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication, // Opens in external browser
-      );
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       throw 'Could not launch $url';
     }
   } catch (e) {
     print('Error opening URL: $e');
-    // Fallback: You might want to show a snackbar or dialog here
   }
 }
 
@@ -48,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _screens.addAll([
       const _BrowserScreen(),
-      const _WatchScreen(),
+      const _WatchScreenWithAd(),
       const HistoryScreen(),
     ]);
     _checkAgreementStatus();
@@ -343,8 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ==================== BROWSER SCREEN WITH LOCALIZATION ====================
-
+// ==================== BROWSER SCREEN WITH BANNER, MREC AND INTERSTITIAL ADS ====================
 class _BrowserScreen extends StatefulWidget {
   const _BrowserScreen();
 
@@ -357,11 +364,123 @@ class _BrowserScreenState extends State<_BrowserScreen> {
   String? _title;
   String? _imageUrl;
   bool _isFetching = false;
+  bool _showVideoPreview = false;
+  BannerAd? _bannerAd;
+  BannerAd? _mrecAd;
+  InterstitialAd? _interstitialAd;
+  bool _isBannerLoaded = false;
+  bool _isMrecLoaded = false;
+  bool _isInterstitialLoaded = false;
+
+  Completer<void>? _adCompleter;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+    _loadMrecAd();
+    _loadInterstitialAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: bannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isBannerLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('BannerAd failed to load: $error');
+          ad.dispose();
+          setState(() {
+            _isBannerLoaded = false;
+          });
+        },
+      ),
+    )..load();
+  }
+
+  void _loadMrecAd() {
+    _mrecAd = BannerAd(
+      adUnitId: mrecAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.mediumRectangle,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isMrecLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('MREC Ad failed to load: $error');
+          ad.dispose();
+          setState(() {
+            _isMrecLoaded = false;
+          });
+        },
+      ),
+    )..load();
+  }
+
+  void _loadInterstitialAd() {
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAd = ad;
+          _isInterstitialLoaded = true;
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              if (_adCompleter != null && !_adCompleter!.isCompleted) {
+                _adCompleter!.complete();
+              }
+              ad.dispose();
+              _loadInterstitialAd();
+              _isInterstitialLoaded = false;
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              if (_adCompleter != null && !_adCompleter!.isCompleted) {
+                _adCompleter!.complete();
+              }
+              ad.dispose();
+              _loadInterstitialAd();
+              _isInterstitialLoaded = false;
+            },
+          );
+          setState(() {});
+        },
+        onAdFailedToLoad: (error) {
+          print('InterstitialAd failed to load: $error');
+          _isInterstitialLoaded = false;
+        },
+      ),
+    );
+  }
+
+  Future<void> _showInterstitialAd() async {
+    if (_isInterstitialLoaded && _interstitialAd != null) {
+      _adCompleter = Completer<void>();
+      _interstitialAd!.show();
+      await _adCompleter!.future;
+    }
+    return;
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    _mrecAd?.dispose();
+    _interstitialAd?.dispose();
+    super.dispose();
+  }
 
   Future<void> _fetchMetadata(String url) async {
     if (url.isEmpty || !url.contains(AppEnv.facebookHost)) return;
-
-    setState(() => _isFetching = true);
 
     try {
       final metadata = await MetadataFetch.extract(url);
@@ -374,20 +493,68 @@ class _BrowserScreenState extends State<_BrowserScreen> {
         _title = 'Video Preview';
         _imageUrl = null;
       });
-    } finally {
-      setState(() => _isFetching = false);
     }
   }
 
   Future<void> _pasteLink() async {
-    final data = await Clipboard.getData('text/plain');
-    if (data?.text != null && data!.text!.isNotEmpty) {
-      _urlController.text = data.text!;
-      _fetchMetadata(data.text!);
+    await _showInterstitialAd();
+
+    if (mounted) {
+      final data = await Clipboard.getData('text/plain');
+      if (data?.text != null && data!.text!.isNotEmpty) {
+        _urlController.text = data.text!;
+
+        final localizations = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Link pasted successfully!'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
     }
   }
 
-  void _navigateToWebView(BuildContext context, {String? url}) {
+  // Fetch video button handler with interstitial ad
+  Future<void> _onFetchVideo() async {
+    String url = _urlController.text.trim();
+
+    if (url.isEmpty) {
+      final localizations = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            localizations?.please_paste_link ?? 'Please paste a link first',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Show interstitial ad before fetching video
+    await _showInterstitialAd();
+
+    // Only proceed with fetching after ad is dismissed
+    if (mounted) {
+      setState(() {
+        _showVideoPreview = true;
+        _isFetching = true;
+      });
+
+      // Fetch metadata
+      if (!url.startsWith('http')) {
+        url = 'https://$url';
+      }
+
+      await _fetchMetadata(url);
+
+      setState(() {
+        _isFetching = false;
+      });
+    }
+  }
+
+  Future<void> _navigateToWebView(BuildContext context, {String? url}) async {
     String finalUrl = url ?? _urlController.text.trim();
     if (finalUrl.isEmpty) {
       final localizations = AppLocalizations.of(context);
@@ -401,14 +568,18 @@ class _BrowserScreenState extends State<_BrowserScreen> {
       return;
     }
 
-    if (!finalUrl.startsWith('http')) {
-      finalUrl = 'https://$finalUrl';
-    }
+    await _showInterstitialAd();
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => WebViewScreen(url: finalUrl)),
-    );
+    if (mounted) {
+      if (!finalUrl.startsWith('http')) {
+        finalUrl = 'https://$finalUrl';
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => WebViewScreen(url: finalUrl)),
+      );
+    }
   }
 
   @override
@@ -470,7 +641,6 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                // Replace WebView with Chrome browser
                 openInChrome(AppEnv.facebookBaseUrl);
               },
               tooltip: localizations?.facebook ?? 'Facebook',
@@ -515,6 +685,19 @@ class _BrowserScreenState extends State<_BrowserScreen> {
           SingleChildScrollView(
             child: Column(
               children: [
+                // Banner Ad at the top
+                if (_isBannerLoaded && _bannerAd != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
+                    child: SizedBox(
+                      height: 50,
+                      child: AdWidget(ad: _bannerAd!),
+                    ),
+                  ),
+
+                const SizedBox(height: 8),
+
+                // URL Input Section
                 Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(16),
@@ -536,6 +719,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                   ),
                   child: Column(
                     children: [
+                      // Text Field for URL input
                       Container(
                         height: 48,
                         decoration: BoxDecoration(
@@ -547,11 +731,6 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                         ),
                         child: TextField(
                           controller: _urlController,
-                          onChanged: (value) {
-                            if (value.contains(AppEnv.facebookHost)) {
-                              _fetchMetadata(value);
-                            }
-                          },
                           decoration: InputDecoration(
                             hintText:
                                 localizations?.searchHint ??
@@ -578,6 +757,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
+                          // Paste Link Button
                           Expanded(
                             child: OutlinedButton(
                               onPressed: _pasteLink,
@@ -599,6 +779,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
+                          // Fetch Video Button with interstitial ad
                           Expanded(
                             child: Container(
                               decoration: BoxDecoration(
@@ -619,6 +800,117 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                                   shadowColor: Colors.transparent,
                                   elevation: 0,
                                 ),
+                                onPressed: _isFetching ? null : _onFetchVideo,
+                                child: _isFetching
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Text('Fetch Video'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Conditional rendering - Show MREC Ad OR Video Preview
+                if (!_showVideoPreview)
+                  // Show MREC Ad when no video preview
+                  Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 336,
+                        height: 280,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade900.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade800),
+                        ),
+                        child: _isMrecLoaded && _mrecAd != null
+                            ? AdWidget(ad: _mrecAd!)
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.video_library,
+                                    size: 50,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Enter URL & tap Fetch Video',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade500,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  )
+                else
+                  // Show Video Preview after clicking Fetch Video
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade900.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                          child: _buildThumbnail(localizations),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _title ??
+                                          (localizations?.video ??
+                                              'Video Preview'),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '720p • MP4',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton.icon(
                                 onPressed: () {
                                   if (_urlController.text.isNotEmpty) {
                                     _navigateToWebView(context);
@@ -633,97 +925,26 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                                     );
                                   }
                                 },
-                                child: Text(
+                                icon: const Icon(Icons.download, size: 18),
+                                label: Text(
                                   localizations?.download ?? 'Download',
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade900.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                        child: _buildThumbnail(localizations),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _title ??
-                                        (localizations?.video ??
-                                            'Video Preview'),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0066ff),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '720p • MP4',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                if (_urlController.text.isNotEmpty) {
-                                  _navigateToWebView(context);
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        localizations?.please_paste_link ??
-                                            'Please paste a link first',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              icon: const Icon(Icons.download, size: 18),
-                              label: Text(
-                                localizations?.download ?? 'Download',
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0066ff),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+
+                // Instructions Section (always visible)
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                   padding: const EdgeInsets.all(16),
@@ -750,13 +971,13 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                       _buildStep(
                         '2',
                         localizations?.step_2 ??
-                            'Paste link in the app and tap Download',
+                            'Paste link and tap Fetch Video',
                       ),
                       const SizedBox(height: 8),
                       _buildStep(
                         '3',
                         localizations?.step_3 ??
-                            'Select quality and save the video',
+                            'Tap Download to save the video',
                       ),
                     ],
                   ),
@@ -781,7 +1002,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
                         Expanded(
                           child: Text(
                             localizations?.tipText ??
-                                '💡 Tip: Try popular videos for best results',
+                                '💡 Tip: Tap "Fetch Video" to see preview before downloading',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.white,
@@ -903,10 +1124,53 @@ class _BrowserScreenState extends State<_BrowserScreen> {
   }
 }
 
-// ==================== WATCH SCREEN WITH LOCALIZATION ====================
 
-class _WatchScreen extends StatelessWidget {
-  const _WatchScreen();
+// ==================== WATCH SCREEN WITH BANNER AD ====================
+
+class _WatchScreenWithAd extends StatefulWidget {
+  const _WatchScreenWithAd();
+
+  @override
+  State<_WatchScreenWithAd> createState() => _WatchScreenWithAdState();
+}
+
+class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
+  BannerAd? _bannerAd;
+  bool _isAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: watchScreenBannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isAdLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('Watch Screen BannerAd failed to load: $error');
+          ad.dispose();
+          setState(() {
+            _isAdLoaded = false;
+          });
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -967,7 +1231,6 @@ class _WatchScreen extends StatelessWidget {
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
               onPressed: () {
-                // Replace WebView with Chrome browser
                 openInChrome(AppEnv.facebookBaseUrl);
               },
               tooltip: localizations?.facebook ?? 'Facebook',
@@ -1010,359 +1273,377 @@ class _WatchScreen extends StatelessWidget {
             ),
           ),
           SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  // Hero Section
+            child: Column(
+              children: [
+                // Banner Ad at the top below the app bar
+                if (_isAdLoaded && _bannerAd != null)
                   Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF0066ff).withOpacity(0.9),
-                          const Color(0xFF1f83ff).withOpacity(0.9),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0066ff).withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: Image.asset(
-                            'assets/images/Watch_Video.png',
-                            width: 60,
-                            height: 60,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.play_circle_filled,
-                              size: 60,
-                              color: Color(0xFF0066ff),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          localizations?.watch_videos ??
-                              'Watch & Download Videos',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          localizations?.tap_below_to_open ??
-                              'Browse and save your favorite videos',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              // Replace WebView with Chrome browser
-                              openInChrome(AppEnv.facebookBaseUrl);
-                            },
-
-                            label: Text(
-                              localizations?.open_app ?? 'Open App',
-                              style: const TextStyle(fontSize: 16),
-                              
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF0066ff),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
+                    child: SizedBox(
+                      height: 50,
+                      child: AdWidget(ad: _bannerAd!),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  // How to Download Videos - Beautiful Section
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 15,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                              colors: [
-                                const Color(0xFF0066ff),
-                                const Color(0xFF1f83ff),
-                              ],
-                            ),
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(20),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.download_for_offline,
-                                  color: Color(0xFF0066ff),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  localizations?.how_to_download_videos ??
-                                      'How to Download Videos',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      // Hero Section
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF0066ff).withOpacity(0.9),
+                              const Color(0xFF1f83ff).withOpacity(0.9),
                             ],
                           ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0066ff).withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            children: [
-                              // Step 1
-                              _buildStepCard(
-                                title: 'Find & Share',
-                                description:
-                                    localizations?.step_1 ??
-                                    'Open ,find a video you like, and tap the Share button',
-                                icon: Icons.looks_one,
-                                color: const Color(0xFF1877F2),
-                              ),
-                              const SizedBox(height: 16),
-                              // Step 2
-                              _buildStepCard(
-                                title: 'Copy Link',
-                                description:
-                                    'Select "Copy Link" from the share options',
-                                icon: Icons.looks_two,
-                                color: const Color(0xFF34A853),
-                              ),
-                              const SizedBox(height: 16),
-                              // Step 3
-                              _buildStepCard(
-                                title: 'Paste & Download',
-                                description:
-                                    localizations?.step_2 ??
-                                    'Go to Home tab, paste the link, and tap Download',
-                                icon: Icons.looks_3,
-                                color: const Color(0xFF0066ff),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Pro Tips Section
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF0066ff).withOpacity(0.2),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
+                        child: Column(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0066ff).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                  ),
+                                ],
                               ),
-                              child: const Icon(
-                                Icons.tips_and_updates,
-                                color: Color(0xFF0066ff),
-                                size: 20,
+                              child: Image.asset(
+                                'assets/images/Watch_Video.png',
+                                width: 60,
+                                height: 60,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.play_circle_filled,
+                                  size: 60,
+                                  color: Color(0xFF0066ff),
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Pro Tips for Best Results',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                            const SizedBox(height: 20),
+                            Text(
+                              localizations?.watch_videos ??
+                                  'Watch & Download Videos',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              localizations?.tap_below_to_open ??
+                                  'Browse and save your favorite videos',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  openInChrome(AppEnv.facebookBaseUrl);
+                                },
+                                label: Text(
+                                  localizations?.open_app ?? 'Open App',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF0066ff),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        _buildTipRow(
-                          '🎯',
-                          localizations?.tip_find_video ??
-                              'Public videos work best for downloading',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTipRow(
-                          '📱',
-                          'Make sure you have a stable internet connection',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildTipRow(
-                          '💾',
-                          'Saved videos are stored in your gallery',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  // Need Help Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                      ),
+                      const SizedBox(height: 20),
+                      // How to Download Videos - Beautiful Section
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
                             ),
-                            title: Row(
-                              children: [
-                                const Icon(
-                                  Icons.help_outline,
-                                  color: Color(0xFF0066ff),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    const Color(0xFF0066ff),
+                                    const Color(0xFF1f83ff),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  localizations?.how_to_download_videos ??
-                                      'Quick Guide',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildDialogStep(
-                                  '1',
-                                  localizations?.step_1 ??
-                                      'Find a video on Facebook',
-                                ),
-                                const SizedBox(height: 12),
-                                _buildDialogStep('2', 'Tap the share button'),
-                                const SizedBox(height: 12),
-                                _buildDialogStep('3', 'Select "Copy Link"'),
-                                const SizedBox(height: 12),
-                                _buildDialogStep(
-                                  '4',
-                                  localizations?.step_2 ??
-                                      'Go to Home tab and paste the link',
-                                ),
-                                const SizedBox(height: 12),
-                                _buildDialogStep(
-                                  '5',
-                                  localizations?.step_3 ??
-                                      'Tap Download button',
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: const Color(0xFF0066ff),
-                                ),
-                                child: Text(
-                                  localizations?.got_it ?? 'Got it',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(20),
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(
-                        Icons.support_agent,
-                        color: Colors.transparent,
-                      ),
-                      label: Text(
-                        localizations?.need_help ?? 'Need Help? Watch Tutorial',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.transparent,
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.download_for_offline,
+                                      color: Color(0xFF0066ff),
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      localizations?.how_to_download_videos ??
+                                          'How to Download Videos',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                children: [
+                                  // Step 1
+                                  _buildStepCard(
+                                    title: 'Find & Share',
+                                    description:
+                                        localizations?.step_1 ??
+                                        'Open ,find a video you like, and tap the Share button',
+                                    icon: Icons.looks_one,
+                                    color: const Color(0xFF1877F2),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Step 2
+                                  _buildStepCard(
+                                    title: 'Copy Link',
+                                    description:
+                                        'Select "Copy Link" from the share options',
+                                    icon: Icons.looks_two,
+                                    color: const Color(0xFF34A853),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  // Step 3
+                                  _buildStepCard(
+                                    title: 'Paste & Download',
+                                    description:
+                                        localizations?.step_2 ??
+                                        'Go to Home tab, paste the link, and tap Download',
+                                    icon: Icons.looks_3,
+                                    color: const Color(0xFF0066ff),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.transparent),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
+                      const SizedBox(height: 20),
+                      // Pro Tips Section
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF0066ff).withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF0066ff,
+                                    ).withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.tips_and_updates,
+                                    color: Color(0xFF0066ff),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'Pro Tips for Best Results',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTipRow(
+                              '🎯',
+                              localizations?.tip_find_video ??
+                                  'Public videos work best for downloading',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildTipRow(
+                              '📱',
+                              'Make sure you have a stable internet connection',
+                            ),
+                            const SizedBox(height: 12),
+                            _buildTipRow(
+                              '💾',
+                              'Saved videos are stored in your gallery',
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      // Need Help Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                title: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.help_outline,
+                                      color: Color(0xFF0066ff),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      localizations?.how_to_download_videos ??
+                                          'Quick Guide',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildDialogStep(
+                                      '1',
+                                      localizations?.step_1 ??
+                                          'Find a video on Facebook',
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildDialogStep(
+                                      '2',
+                                      'Tap the share button',
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildDialogStep('3', 'Select "Copy Link"'),
+                                    const SizedBox(height: 12),
+                                    _buildDialogStep(
+                                      '4',
+                                      localizations?.step_2 ??
+                                          'Go to Home tab and paste the link',
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _buildDialogStep(
+                                      '5',
+                                      localizations?.step_3 ??
+                                          'Tap Download button',
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFF0066ff),
+                                    ),
+                                    child: Text(
+                                      localizations?.got_it ?? 'Got it',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.support_agent,
+                            color: Colors.transparent,
+                          ),
+                          label: Text(
+                            localizations?.need_help ??
+                                'Need Help? Watch Tutorial',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.transparent,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.transparent),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

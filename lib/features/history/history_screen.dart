@@ -1,3 +1,5 @@
+
+
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
@@ -9,7 +11,12 @@ import 'package:open_file/open_file.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:io';
+
+// Add your AdMob ad unit ID for history screen
+const String historyScreenBannerAdUnitId =
+    'ca-app-pub-3940256099942544/6300978111'; // Test banner ad unit ID - Replace with your actual ad unit ID
 
 class HistoryScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -29,6 +36,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // Track items that are being deleted to prevent multiple deletions
   final Set<int> _deletingItems = {};
   int _currentBottomNavIndex = 2; // Start on Saved tab
+
+  // Banner Ad variables
+  BannerAd? _bannerAd;
+  bool _isAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBannerAd();
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: historyScreenBannerAdUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isAdLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('History Screen BannerAd failed to load: $error');
+          ad.dispose();
+          setState(() {
+            _isAdLoaded = false;
+          });
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
 
   Future<void> openInChrome(String url) async {
     if (await canLaunchUrl(Uri.parse(url))) {
@@ -176,270 +221,292 @@ class _HistoryScreenState extends State<HistoryScreen> {
             fit: BoxFit.cover,
           ),
         ),
-        child: Consumer<DownloadController>(
-          builder: (context, controller, child) {
-            final history = controller.downloadHistory;
+        child: Column(
+          children: [
+            // Banner Ad below the app bar
+            if (_isAdLoaded && _bannerAd != null)
+              Container(
+                margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
+                child: SizedBox(height: 50, child: AdWidget(ad: _bannerAd!)),
+              ),
 
-            if (history.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/images/No_media_found.png',
-                      height: 90,
-                      width: 90,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      localizations?.noDownloads ?? 'No downloads yet',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      localizations?.historyHint ??
-                          'Download videos from the browser',
-                      style: const TextStyle(color: Colors.white60),
-                    ),
-                  ],
-                ),
-              );
-            }
+            // Main content
+            Expanded(
+              child: Consumer<DownloadController>(
+                builder: (context, controller, child) {
+                  final history = controller.downloadHistory;
 
-            return Column(
-              children: [
-                // Refresh Button outside AppBar
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Tooltip(
-                      message: localizations?.history ?? 'Refresh History',
-                      child: TextButton(
-                        child: Text(
-                          localizations?.refresh ?? 'Refresh',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                  if (history.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/No_media_found.png',
+                            height: 90,
+                            width: 90,
                           ),
-                        ),
-                        onPressed: () async {
-                          await controller.loadHistory();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                localizations?.historyHint ??
-                                    'History refreshed',
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
+                          const SizedBox(height: 16),
+                          Text(
+                            localizations?.noDownloads ?? 'No downloads yet',
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            localizations?.historyHint ??
+                                'Download videos from the browser',
+                            style: const TextStyle(color: Colors.white60),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: history.length,
-                    itemBuilder: (context, index) {
-                      final item = history[index];
-                      final itemId = item['id'] as int;
+                    );
+                  }
 
-                      // Don't show if it's currently being deleted
-                      if (_deletingItems.contains(itemId)) {
-                        return const SizedBox.shrink();
-                      }
-
-                      return Dismissible(
-                        key: Key(itemId.toString()),
-                        direction: DismissDirection.horizontal,
-                        confirmDismiss: (direction) async {
-                          // Show popup and wait for user decision
-                          final shouldDelete =
-                              await _showDeleteConfirmationDialog(
-                                context,
-                                item,
-                                localizations,
-                              );
-
-                          if (shouldDelete == true) {
-                            // Actually delete
-                            setState(() {
-                              _deletingItems.add(itemId);
-                            });
-                            await controller.deleteHistoryItem(
-                              item['id'],
-                              item['filePath'],
-                            );
-                            setState(() {
-                              _deletingItems.remove(itemId);
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${item['fileName']} ${localizations?.deleted ?? 'deleted'}',
+                  return Column(
+                    children: [
+                      // Refresh Button outside AppBar
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Tooltip(
+                            message:
+                                localizations?.history ?? 'Refresh History',
+                            child: TextButton(
+                              child: Text(
+                                localizations?.refresh ?? 'Refresh',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            );
-                          }
-
-                          return shouldDelete;
-                        },
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 20),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        secondaryBackground: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                        ),
-                        child: Card(
-                          margin: const EdgeInsets.all(8),
-                          color: Colors.white,
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            leading: FutureBuilder<String?>(
-                              future: _getThumbnail(item['filePath']),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.grey[200],
+                              onPressed: () async {
+                                await controller.loadHistory();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      localizations?.historyHint ??
+                                          'History refreshed',
                                     ),
-                                    child: const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: history.length,
+                          itemBuilder: (context, index) {
+                            final item = history[index];
+                            final itemId = item['id'] as int;
+
+                            // Don't show if it's currently being deleted
+                            if (_deletingItems.contains(itemId)) {
+                              return const SizedBox.shrink();
+                            }
+
+                            return Dismissible(
+                              key: Key(itemId.toString()),
+                              direction: DismissDirection.horizontal,
+                              confirmDismiss: (direction) async {
+                                // Show popup and wait for user decision
+                                final shouldDelete =
+                                    await _showDeleteConfirmationDialog(
+                                      context,
+                                      item,
+                                      localizations,
+                                    );
+
+                                if (shouldDelete == true) {
+                                  // Actually delete
+                                  setState(() {
+                                    _deletingItems.add(itemId);
+                                  });
+                                  await controller.deleteHistoryItem(
+                                    item['id'],
+                                    item['filePath'],
+                                  );
+                                  setState(() {
+                                    _deletingItems.remove(itemId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${item['fileName']} ${localizations?.deleted ?? 'deleted'}',
                                       ),
                                     ),
                                   );
                                 }
 
-                                if (snapshot.hasData && snapshot.data != null) {
-                                  return ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.file(
-                                      File(snapshot.data!),
-                                      width: 60,
-                                      height: 60,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              width: 60,
-                                              height: 60,
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                                color: Colors.grey[200],
-                                              ),
-                                              child: const Icon(
-                                                Icons.broken_image,
-                                                color: Colors.grey,
-                                              ),
-                                            );
-                                          },
-                                    ),
-                                  );
-                                }
-
-                                return Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: Colors.grey[200],
-                                  ),
-                                  child: const Icon(
-                                    Icons.video_file,
-                                    size: 30,
-                                    color: Colors.grey,
-                                  ),
-                                );
+                                return shouldDelete;
                               },
-                            ),
-                            title: Text(
-                              item['fileName'],
-                              maxLines: 1,
-                              style: const TextStyle(
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${localizations?.quality ?? 'Quality'}: ${item['quality']} | '
-                                  'Size: ${item['fileSize']}', // Shows popup/estimated size
-                                  style: const TextStyle(color: Colors.black54),
+                              background: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 20),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 30,
                                 ),
-                                if (item['actualFileSize'] != null &&
-                                    item['actualFileSize'] != item['fileSize'])
-                                  Text(
-                                    'Actual: ${item['actualFileSize']}',
+                              ),
+                              secondaryBackground: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
+                              child: Card(
+                                margin: const EdgeInsets.all(8),
+                                color: Colors.white,
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ListTile(
+                                  leading: FutureBuilder<String?>(
+                                    future: _getThumbnail(item['filePath']),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return Container(
+                                          width: 60,
+                                          height: 60,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            color: Colors.grey[200],
+                                          ),
+                                          child: const Center(
+                                            child: SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+
+                                      if (snapshot.hasData &&
+                                          snapshot.data != null) {
+                                        return ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Image.file(
+                                            File(snapshot.data!),
+                                            width: 60,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return Container(
+                                                    width: 60,
+                                                    height: 60,
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      color: Colors.grey[200],
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  );
+                                                },
+                                          ),
+                                        );
+                                      }
+
+                                      return Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          color: Colors.grey[200],
+                                        ),
+                                        child: const Icon(
+                                          Icons.video_file,
+                                          size: 30,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  title: Text(
+                                    item['fileName'],
+                                    maxLines: 1,
                                     style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black38,
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                Text(
-                                  _formatDate(item['dateTime'], localizations),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black45,
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${localizations?.quality ?? 'Quality'}: ${item['quality']} | '
+                                        'Size: ${item['fileSize']}', // Shows popup/estimated size
+                                        style: const TextStyle(
+                                          color: Colors.black54,
+                                        ),
+                                      ),
+                                      Text(
+                                        _formatDate(
+                                          item['dateTime'],
+                                          localizations,
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black45,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: IconButton(
+                                    icon: const Icon(
+                                      Icons.play_arrow,
+                                      color: Color.fromARGB(255, 48, 172, 85),
+                                    ),
+                                    onPressed: () =>
+                                        OpenFile.open(item['filePath']),
+                                  ),
+                                  onLongPress: () => _deleteItem(
+                                    context,
+                                    controller,
+                                    item,
+                                    localizations,
                                   ),
                                 ),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(
-                                Icons.play_arrow,
-                                color: Color.fromARGB(255, 48, 172, 85),
                               ),
-                              onPressed: () => OpenFile.open(item['filePath']),
-                            ),
-                            onLongPress: () => _deleteItem(
-                              context,
-                              controller,
-                              item,
-                              localizations,
-                            ),
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: widget.showBottomNav

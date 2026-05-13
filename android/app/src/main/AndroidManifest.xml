@@ -39,6 +39,11 @@
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">
         
+        <!-- Add your AdMob App ID here -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3605518487927639~1152937785"/>
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"

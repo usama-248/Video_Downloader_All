@@ -40,10 +40,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = (keystoreProperties["keyAlias"] as? String) ?: "androiddebugkey"
+            keyPassword = (keystoreProperties["keyPassword"] as? String) ?: "android"
+            storeFile = (keystoreProperties["storeFile"] as? String)?.let { file(it) } ?: file(System.getProperty("user.home") + "/.android/debug.keystore")
+            storePassword = (keystoreProperties["storePassword"] as? String) ?: "android"
         }
     }
 
@@ -58,6 +58,11 @@ android {
             )
         }
     }
+
+    dependencies {
+    // Add Google Mobile Ads dependency
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
+}
 
 }
 
