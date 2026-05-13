@@ -1,3 +1,5 @@
+
+
 // ignore_for_file: unused_local_variable, unused_element, unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
@@ -17,9 +19,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-// Add your Rewarded Ad unit ID here
+// Add your Ad Unit IDs here
 const String rewardedAdUnitId =
     'ca-app-pub-3940256099942544/5224354917'; // Test rewarded ad unit ID
+const String interstitialAdUnitIdForDownload =
+    'ca-app-pub-3940256099942544/1033173712'; // Test interstitial ad unit ID
 
 class WebViewScreen extends StatefulWidget {
   final String url;
@@ -49,6 +53,14 @@ class _WebViewScreenState extends State<WebViewScreen> {
   String? _pendingFilePath;
   String? _pendingFileName;
   bool _isAudioPending = false;
+
+  // Interstitial Ad for Download variables
+  InterstitialAd? _interstitialAdForDownload;
+  bool _isInterstitialAdForDownloadLoaded = false;
+  Completer<void>? _interstitialAdCompleter;
+  String? _pendingTier;
+  String? _pendingHistoryLabel;
+  String? _pendingExpectedSize;
 
   // File sizes for different qualities
   String? _size1080p;
@@ -87,6 +99,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     _requestPermissions();
     _initWebView();
     _loadRewardedAd();
+    _loadInterstitialAdForDownload();
   }
 
   void _loadRewardedAd() {
@@ -100,14 +113,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              _loadRewardedAd(); // Load next ad
+              _loadRewardedAd();
               _isRewardedAdLoaded = false;
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
-              _loadRewardedAd(); // Load next ad
+              _loadRewardedAd();
               _isRewardedAdLoaded = false;
-              // Still navigate to history even if ad fails
               if (_pendingFilePath != null) {
                 _navigateToHistory();
               }
@@ -118,6 +130,66 @@ class _WebViewScreenState extends State<WebViewScreen> {
         onAdFailedToLoad: (error) {
           print('RewardedAd failed to load: $error');
           _isRewardedAdLoaded = false;
+        },
+      ),
+    );
+  }
+
+  void _loadInterstitialAdForDownload() {
+    InterstitialAd.load(
+      adUnitId: interstitialAdUnitIdForDownload,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _interstitialAdForDownload = ad;
+          _isInterstitialAdForDownloadLoaded = true;
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              _isInterstitialAdForDownloadLoaded = false;
+              _loadInterstitialAdForDownload();
+              // Continue with download after ad is dismissed
+              if (_pendingTier != null && _pendingHistoryLabel != null) {
+                _continueDownload(
+                  _pendingTier!,
+                  _pendingHistoryLabel!,
+                  _pendingExpectedSize,
+                );
+                _pendingTier = null;
+                _pendingHistoryLabel = null;
+                _pendingExpectedSize = null;
+              }
+              if (_interstitialAdCompleter != null &&
+                  !_interstitialAdCompleter!.isCompleted) {
+                _interstitialAdCompleter!.complete();
+              }
+            },
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              print('Interstitial ad failed to show: $error');
+              ad.dispose();
+              _isInterstitialAdForDownloadLoaded = false;
+              // Continue with download even if ad fails
+              if (_pendingTier != null && _pendingHistoryLabel != null) {
+                _continueDownload(
+                  _pendingTier!,
+                  _pendingHistoryLabel!,
+                  _pendingExpectedSize,
+                );
+                _pendingTier = null;
+                _pendingHistoryLabel = null;
+                _pendingExpectedSize = null;
+              }
+              if (_interstitialAdCompleter != null &&
+                  !_interstitialAdCompleter!.isCompleted) {
+                _interstitialAdCompleter!.complete();
+              }
+            },
+          );
+          setState(() {});
+        },
+        onAdFailedToLoad: (error) {
+          print('Interstitial ad for download failed to load: $error');
+          _isInterstitialAdForDownloadLoaded = false;
         },
       ),
     );
@@ -136,14 +208,45 @@ class _WebViewScreenState extends State<WebViewScreen> {
       _rewardedAd!.show(
         onUserEarnedReward: (ad, reward) {
           print('User earned reward: ${reward.amount} ${reward.type}');
-          // Reward earned, navigate to history
           _navigateToHistory();
         },
       );
     } else {
-      // If ad not loaded, still allow navigation
       print('Rewarded ad not ready, navigating without reward');
       _navigateToHistory();
+    }
+  }
+
+  Future<void> _showInterstitialAdBeforeDownload(
+    String tier,
+    String historyLabel,
+    String? expectedSize,
+  ) async {
+    _pendingTier = tier;
+    _pendingHistoryLabel = historyLabel;
+    _pendingExpectedSize = expectedSize;
+
+    if (_isInterstitialAdForDownloadLoaded &&
+        _interstitialAdForDownload != null) {
+      _interstitialAdCompleter = Completer<void>();
+      _interstitialAdForDownload!.show();
+      await _interstitialAdCompleter!.future;
+    } else {
+      // If ad not loaded, continue download directly
+      await _continueDownload(tier, historyLabel, expectedSize);
+    }
+  }
+
+  Future<void> _continueDownload(
+    String tier,
+    String historyLabel,
+    String? expectedSize,
+  ) async {
+    if (tier.startsWith('Audio_')) {
+      final bitrate = tier.split('_')[1];
+      await _extractAndDownloadAudio(historyLabel, expectedSize, bitrate);
+    } else {
+      await _downloadVideo(tier, historyLabel, expectedSize);
     }
   }
 
@@ -162,6 +265,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   void dispose() {
     _speedTimer?.cancel();
     _rewardedAd?.dispose();
+    _interstitialAdForDownload?.dispose();
     super.dispose();
   }
 
@@ -353,23 +457,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
         if (contentLength != null) {
           final bytes = int.parse(contentLength);
 
-          // Calculate approximate video duration (rough estimate)
-          // Assuming average bitrate of 2-5 Mbps for video
-          // Average ~3.5 Mbps = 437,500 bytes per second
           final estimatedDurationSeconds = bytes / 437500;
-          final estimatedDurationMinutes = estimatedDurationSeconds / 60;
 
           setState(() {
-            // Map quality to estimated sizes based on the original file
             _size1080p = _formatFileSize(bytes);
             _size720p = _formatFileSize((bytes * 0.7).round());
             _size480p = _formatFileSize((bytes * 0.45).round());
             _size360p = _formatFileSize((bytes * 0.3).round());
             _size144p = _formatFileSize((bytes * 0.12).round());
 
-            // Audio sizes based on bitrate and duration
-            // 128kbps = 16 KB per second = 960 KB per minute
-            // 320kbps = 40 KB per second = 2400 KB per minute
             final audioSize128Bytes =
                 (estimatedDurationSeconds * 128 * 1024 / 8).round();
             final audioSize320Bytes =
@@ -559,26 +655,18 @@ class _WebViewScreenState extends State<WebViewScreen> {
       _selectedDownloadSize = expectedSize;
     });
 
-    if (tier.startsWith('Audio_')) {
-      // Extract bitrate from tier (e.g., "Audio_128" -> "128")
-      final bitrate = tier.split('_')[1];
-      setState(() {
-        _selectedAudioBitrate = bitrate;
-      });
-      await _extractAndDownloadAudio(
-        historyQualityLabel,
-        expectedSize,
-        bitrate,
-      );
-    } else {
-      await _downloadVideo(tier, historyQualityLabel, expectedSize);
-    }
+    // Show interstitial ad before starting download
+    await _showInterstitialAdBeforeDownload(
+      tier,
+      historyQualityLabel,
+      expectedSize,
+    );
   }
 
   Future<void> _extractAndDownloadAudio(
     String historyQualityLabel,
     String? audioSize,
-    String bitrate, // Add bitrate parameter
+    String bitrate,
   ) async {
     final localizations = AppLocalizations.of(context);
 
@@ -630,7 +718,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     String url,
     String fileName,
     String historyQualityLabel,
-    String bitrate, // Add bitrate parameter
+    String bitrate,
   ) async {
     final localizations = AppLocalizations.of(context);
 
@@ -691,16 +779,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
         return null;
       }
 
-      // Set audio quality based on bitrate
-      // For libmp3lame, -q:a 0 is highest quality (320kbps), -q:a 2 is ~190kbps, -q:a 4 is ~128kbps
       String audioQuality;
       switch (bitrate) {
         case '320':
-          audioQuality = '0'; // Best quality ~320kbps
+          audioQuality = '0';
           break;
-
         case '128':
-          audioQuality = '4'; // Good quality ~128kbps
+          audioQuality = '4';
           break;
         default:
           audioQuality = '4';
@@ -738,7 +823,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       if (!mounted) return null;
       final downloadController = context.read<DownloadController>();
 
-      // Get actual file size
       final savedFile = File(savePath);
       final actualSizeBytes = await savedFile.length();
 
@@ -1169,7 +1253,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          // Show rewarded ad on OK button
+                          _showRewardedAdForHistory(
+                            filePath,
+                            fileName,
+                            isAudio,
+                          );
+                        },
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Color(0xFF0066ff)),
                           shape: RoundedRectangleBorder(
@@ -1185,7 +1277,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          // Show rewarded ad before navigating to history
+                          // Show rewarded ad on History button
                           _showRewardedAdForHistory(
                             filePath,
                             fileName,
@@ -1837,9 +1929,6 @@ class _DownloadQualityBottomSheet extends StatefulWidget {
       _DownloadQualityBottomSheetState();
 }
 
-// Updated _DownloadQualityBottomSheet with only 128kbps and 320kbps options
-// Also fixed audio size calculation
-
 class _DownloadQualityBottomSheetState
     extends State<_DownloadQualityBottomSheet> {
   static const String _k1080p = '1080p';
@@ -2050,7 +2139,7 @@ class _DownloadQualityBottomSheetState
               gradient: const LinearGradient(
                 colors: [Color.fromARGB(255, 69, 86, 99), Color(0xFFEEF2F3)],
               ),
-              color: Color.fromARGB(255, 69, 86, 99),
+              color: const Color.fromARGB(255, 69, 86, 99),
               isLoading: widget.isFetchingSizes && widget.size360p == null,
               isSelected: _isSelected(_k360p),
               onTap: () => setState(() => _picked = _k360p),
