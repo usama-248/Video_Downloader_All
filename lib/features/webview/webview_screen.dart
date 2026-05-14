@@ -1,6 +1,3 @@
-
-
-// ignore_for_file: unused_local_variable, unused_element, unnecessary_null_comparison, unused_field
 // ignore_for_file: unused_local_variable, unused_element, unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
@@ -19,12 +16,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:gal/gal.dart';
 
 // Add your REAL Ad Unit IDs here
-const String rewardedAdUnitId =
-    'ca-app-pub-3605518487927639/1811413333'; // REAL Rewarded ad unit ID
+const String rewardedAdUnitId = 'ca-app-pub-3605518487927639/1811413333';
 const String interstitialAdUnitIdForDownload =
-    'ca-app-pub-3605518487927639/3124495001'; // REAL Interstitial ad unit ID
+    'ca-app-pub-3605518487927639/3124495001';
 
 class WebViewScreen extends StatefulWidget {
   final String url;
@@ -74,7 +71,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   String? _audioSize320kbps;
   bool _isFetchingSizes = false;
 
-  // ACTUAL download progress tracking from the real download stream
+  // ACTUAL download progress tracking
   int _receivedBytes = 0;
   int _actualTotalBytes = 0;
   bool _totalKnown = false;
@@ -84,14 +81,10 @@ class _WebViewScreenState extends State<WebViewScreen> {
   int _lastSpeedCalcBytes = 0;
   Timer? _speedTimer;
 
-  // Store the selected download size for consistent display
   String? _selectedDownloadSize;
   String? _selectedDownloadQuality;
-
   bool _downloadIsAudio = false;
   bool _downloadProgressIsLowQuality = false;
-
-  // Store selected audio bitrate
   String? _selectedAudioBitrate;
 
   @override
@@ -149,7 +142,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
               ad.dispose();
               _isInterstitialAdForDownloadLoaded = false;
               _loadInterstitialAdForDownload();
-              // Continue with download after ad is dismissed
               if (_pendingTier != null && _pendingHistoryLabel != null) {
                 _continueDownload(
                   _pendingTier!,
@@ -169,7 +161,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
               print('Interstitial ad failed to show: $error');
               ad.dispose();
               _isInterstitialAdForDownloadLoaded = false;
-              // Continue with download even if ad fails
               if (_pendingTier != null && _pendingHistoryLabel != null) {
                 _continueDownload(
                   _pendingTier!,
@@ -233,7 +224,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       _interstitialAdForDownload!.show();
       await _interstitialAdCompleter!.future;
     } else {
-      // If ad not loaded, continue download directly
       await _continueDownload(tier, historyLabel, expectedSize);
     }
   }
@@ -270,7 +260,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     super.dispose();
   }
 
-  // ✅ FIXED: Removed MANAGE_EXTERNAL_STORAGE permission
+  // ✅ Fixed: Proper permission request for Android
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
       // For Android 13+ (API 33+)
@@ -470,7 +460,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
         final contentLength = response.headers.value('content-length');
         if (contentLength != null) {
           final bytes = int.parse(contentLength);
-
           final estimatedDurationSeconds = bytes / 437500;
 
           setState(() {
@@ -663,13 +652,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
   ) async {
     if (!mounted) return;
 
-    // Store the selected quality and expected size for display
     setState(() {
       _selectedDownloadQuality = historyQualityLabel;
       _selectedDownloadSize = expectedSize;
     });
 
-    // Show interstitial ad before starting download
     await _showInterstitialAdBeforeDownload(
       tier,
       historyQualityLabel,
@@ -728,7 +715,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
-  // ✅ FIXED: Save audio to app's documents directory
+  // Audio download - saves to app documents (Gal doesn't support audio well)
   Future<String?> _downloadAudioFile(
     String url,
     String fileName,
@@ -748,7 +735,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'Referer': AppEnv.facebookReferer,
       };
 
-      // Download to temp directory first
       final tempDir = await getTemporaryDirectory();
       final tempVideoPath = path.join(
         tempDir.path,
@@ -793,7 +779,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
           audioQuality = '4';
       }
 
-      // Create temp audio file path
       final tempAudioPath = path.join(tempDir.path, fileName);
 
       final session = await FFmpegKit.executeWithArguments([
@@ -809,7 +794,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ]);
       final returnCode = await session.getReturnCode();
 
-      // Clean up temp video
       try {
         final tmp = File(tempVideoPath);
         if (await tmp.exists()) await tmp.delete();
@@ -820,20 +804,17 @@ class _WebViewScreenState extends State<WebViewScreen> {
           final out = File(tempAudioPath);
           if (await out.exists()) await out.delete();
         } catch (_) {}
-        debugPrint(
-          'FFmpeg MP3 conversion failed: ${await session.getOutput()}',
-        );
+        debugPrint('FFmpeg MP3 conversion failed');
         return null;
       }
 
       if (!mounted) return null;
 
-      // ✅ Save to app's documents directory (no special permissions needed)
+      // Save audio to app documents
       final documentsDir = await getApplicationDocumentsDirectory();
       final savedPath = path.join(documentsDir.path, fileName);
       await File(tempAudioPath).copy(savedPath);
 
-      // Clean up temp audio
       try {
         await File(tempAudioPath).delete();
       } catch (_) {}
@@ -1035,7 +1016,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     return bestUrl.isEmpty ? detectedVideoUrl! : bestUrl;
   }
 
-  // ✅ FIXED: Save video to app's documents directory
+  // ✅ FIXED: Save video directly to gallery using Gal (No accessType error)
   Future<String?> _downloadFile(
     String url,
     String fileName,
@@ -1052,13 +1033,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'Referer': AppEnv.facebookReferer,
       };
 
-      // Save to app's documents directory (no special permissions needed)
-      final documentsDir = await getApplicationDocumentsDirectory();
-      final savePath = path.join(documentsDir.path, fileName);
+      // Download to temp directory first
+      final tempDir = await getTemporaryDirectory();
+      final tempPath = path.join(tempDir.path, fileName);
 
       await dio.download(
         url,
-        savePath,
+        tempPath,
         onReceiveProgress: (received, total) {
           _updateProgress(received, total);
         },
@@ -1066,26 +1047,60 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
       if (!mounted) return null;
 
-      final savedFile = File(savePath);
-      final actualSizeBytes = await savedFile.length();
+      // Try to save to gallery using Gal
+      bool gallerySaved = false;
+      try {
+        // Check if we have access (Gal handles permissions internally)
+        final hasAccess = await Gal.hasAccess();
+        if (!hasAccess) {
+          // Request access - this will show system permission dialog
+          await Gal.requestAccess();
+        }
 
+        // Save video to gallery
+        await Gal.putVideo(tempPath);
+        gallerySaved = true;
+        debugPrint('✅ Video saved to gallery: $fileName');
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Video saved to Gallery'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Failed to save to gallery: $e');
+        gallerySaved = false;
+      }
+
+      // Save to history
       final downloadController = context.read<DownloadController>();
+      final actualSizeBytes = await File(tempPath).length();
+
       await downloadController.addToHistory(
         fileName: fileName,
-        filePath: savePath,
+        filePath: tempPath,
         videoUrl: url,
         quality: historyQualityLabel,
         actualFileSizeBytes: actualSizeBytes,
         estimatedSize: _selectedDownloadSize,
       );
-
       await downloadController.loadHistory();
 
-      debugPrint(
-        '✅ Download completed: $fileName (Actual size: ${_formatFileSize(actualSizeBytes)})',
-      );
+      if (!gallerySaved && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Video saved to app folder: $fileName'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
 
-      return savePath;
+      return tempPath;
     } catch (e) {
       debugPrint('Download error: $e');
       return null;
@@ -1099,7 +1114,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }) async {
     final localizations = AppLocalizations.of(context);
 
-    // Get actual file size
     final actualFile = File(filePath);
     final actualSizeBytes = await actualFile.length();
     final actualSizeStr = _formatFileSize(actualSizeBytes);
@@ -1218,7 +1232,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        isAudio ? Icons.music_note : Icons.folder,
+                        isAudio ? Icons.music_note : Icons.video_library,
                         color: const Color(0xFF0066ff),
                       ),
                       const SizedBox(width: 12),
@@ -1234,7 +1248,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
                               ),
                             ),
                             Text(
-                              'App Documents Folder',
+                              isAudio ? 'App Documents' : 'Device Gallery',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.grey.shade600,
@@ -1253,7 +1267,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
                       child: OutlinedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          // Show rewarded ad on OK button
                           _showRewardedAdForHistory(
                             filePath,
                             fileName,
@@ -1275,7 +1288,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          // Show rewarded ad on History button
                           _showRewardedAdForHistory(
                             filePath,
                             fileName,
@@ -2061,7 +2073,6 @@ class _DownloadQualityBottomSheetState
             const Divider(),
             const SizedBox(height: 16),
 
-            // Video Quality Section Title
             Padding(
               padding: const EdgeInsets.only(left: 8, bottom: 8),
               child: Row(
@@ -2159,7 +2170,6 @@ class _DownloadQualityBottomSheetState
             ),
             const SizedBox(height: 20),
 
-            // Audio Quality Section Title
             Padding(
               padding: const EdgeInsets.only(left: 8, bottom: 8),
               child: Row(
