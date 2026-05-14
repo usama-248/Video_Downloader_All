@@ -10,6 +10,7 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'dart:io';
 
 // Add your AdMob ad unit ID for history screen - USING REAL AD UNIT ID
@@ -39,10 +40,92 @@ class _HistoryScreenState extends State<HistoryScreen> {
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
 
+  // Firebase Analytics
+  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
   @override
   void initState() {
     super.initState();
     _loadBannerAd();
+    _logScreenView();
+  }
+
+  // Log screen view when screen opens
+  Future<void> _logScreenView() async {
+    await _analytics.logScreenView(
+      screenName: 'HistoryScreen',
+      screenClass: 'HistoryScreen',
+    );
+  }
+
+  // Log when user views a video from history
+  Future<void> _logPlayVideo(String fileName, String quality, String fileSize) async {
+    await _analytics.logEvent(
+      name: 'play_video_from_history',
+      parameters: {
+        'file_name': fileName,
+        'quality': quality,
+        'file_size': fileSize,
+      },
+    );
+  }
+
+  // Log when user deletes a video
+  Future<void> _logDeleteVideo(String fileName, String quality, int historyCount) async {
+    await _analytics.logEvent(
+      name: 'delete_video_from_history',
+      parameters: {
+        'file_name': fileName,
+        'quality': quality,
+        'remaining_videos': historyCount - 1,
+      },
+    );
+  }
+
+  // Log when user refreshes history
+  Future<void> _logRefreshHistory(int historyCount) async {
+    await _analytics.logEvent(
+      name: 'refresh_history',
+      parameters: {
+        'total_videos': historyCount,
+      },
+    );
+  }
+
+  // Log when user navigates to premium from history
+  Future<void> _logNavigateToPremium() async {
+    await _analytics.logEvent(
+      name: 'navigate_to_premium_from_history',
+      parameters: {},
+    );
+  }
+
+  // Log when user navigates to settings from history
+  Future<void> _logNavigateToSettings() async {
+    await _analytics.logEvent(
+      name: 'navigate_to_settings_from_history',
+      parameters: {},
+    );
+  }
+
+  // Log when user navigates to Facebook
+  Future<void> _logOpenFacebook() async {
+    await _analytics.logEvent(
+      name: 'open_facebook_from_history',
+      parameters: {},
+    );
+  }
+
+  // Log bottom navigation taps
+  Future<void> _logBottomNavTap(int index, String tabName) async {
+    await _analytics.logEvent(
+      name: 'bottom_nav_tap',
+      parameters: {
+        'from_screen': 'HistoryScreen',
+        'target_tab': tabName,
+        'tab_index': index,
+      },
+    );
   }
 
   void _loadBannerAd() {
@@ -74,6 +157,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> openInChrome(String url) async {
+    await _logOpenFacebook();
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
@@ -81,6 +165,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _onBottomNavTap(int index) {
     if (index == 0) {
+      _logBottomNavTap(index, 'Home');
       // Navigate back to main Home tab
       if (widget.onBackToHome != null) {
         widget.onBackToHome!();
@@ -88,6 +173,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         Navigator.pop(context);
       }
     } else if (index == 1) {
+      _logBottomNavTap(index, 'Watch');
       // Navigate back to main Watch tab
       if (widget.onBackToHome != null) {
         widget.onBackToHome!();
@@ -151,6 +237,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const Icon(Icons.star, color: Colors.white, size: 22),
               ),
               onPressed: () {
+                _logNavigateToPremium();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -194,6 +281,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const Icon(Icons.settings, color: Colors.white, size: 22),
               ),
               onPressed: () {
+                _logNavigateToSettings();
                 if (widget.showBottomNav) {
                   // If we're in bottom nav mode, navigate back to main settings
                   widget.onBackToHome?.call();
@@ -282,6 +370,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                               ),
                               onPressed: () async {
+                                await _logRefreshHistory(history.length);
                                 await controller.loadHistory();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -322,6 +411,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     );
 
                                 if (shouldDelete == true) {
+                                  // Log delete event
+                                  await _logDeleteVideo(
+                                    item['fileName'],
+                                    item['quality'],
+                                    history.length,
+                                  );
+                                  
                                   // Actually delete
                                   setState(() {
                                     _deletingItems.add(itemId);
@@ -484,8 +580,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       Icons.play_arrow,
                                       color: Color.fromARGB(255, 48, 172, 85),
                                     ),
-                                    onPressed: () =>
-                                        OpenFile.open(item['filePath']),
+                                    onPressed: () async {
+                                      // Log play video event
+                                      await _logPlayVideo(
+                                        item['fileName'],
+                                        item['quality'],
+                                        item['fileSize'],
+                                      );
+                                      OpenFile.open(item['filePath']);
+                                    },
                                   ),
                                   onLongPress: () => _deleteItem(
                                     context,
@@ -645,6 +748,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
           TextButton(
             onPressed: () async {
+              await _logDeleteVideo(
+                item['fileName'],
+                item['quality'],
+                controller.downloadHistory.length,
+              );
               await controller.deleteHistoryItem(item['id'], item['filePath']);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(

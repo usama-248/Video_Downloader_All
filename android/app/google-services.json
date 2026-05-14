@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "317858009144",
+    "project_id": "scary-baboon-night-escape",
+    "storage_bucket": "scary-baboon-night-escape.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:317858009144:android:c601d072ab385d049056cd",
+        "android_client_info": {
+          "package_name": "com.FutureLabszee.facebook.video.downloader"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-Ek0959y42njs0gp3TdmVDE9x2GQDzD8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

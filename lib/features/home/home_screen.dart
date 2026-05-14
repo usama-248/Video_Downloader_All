@@ -1,7 +1,7 @@
+
 // ignore_for_file: unused_local_variable
 
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +10,7 @@ import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 import '../webview/webview_screen.dart';
 import '../history/history_screen.dart';
@@ -17,18 +18,16 @@ import '../premium/premium_screen.dart';
 import '../settings/settings_screen.dart';
 
 // Add your REAL AdMob ad unit IDs here
-const String bannerAdUnitId =
-    'ca-app-pub-3605518487927639/8115755781'; // Real banner ad unit ID
-const String mrecAdUnitId =
-    'ca-app-pub-3605518487927639/6802674114'; // Real MREC ad unit ID
+const String bannerAdUnitId = 'ca-app-pub-3605518487927639/8115755781';
+const String mrecAdUnitId = 'ca-app-pub-3605518487927639/6802674114';
 const String watchScreenBannerAdUnitId =
-    'ca-app-pub-3605518487927639/8115755781'; // Real banner ad unit ID for Watch screen
-const String interstitialAdUnitId =
-    'ca-app-pub-3605518487927639/3124495001'; // Real interstitial ad unit ID
-const String appOpenAdUnitId =
-    'ca-app-pub-3605518487927639/7526774448'; // Real app open ad unit ID
-const String rewardedAdUnitId =
-    'ca-app-pub-3605518487927639/1811413333'; // Real rewarded ad unit ID
+    'ca-app-pub-3605518487927639/8115755781';
+const String interstitialAdUnitId = 'ca-app-pub-3605518487927639/3124495001';
+const String appOpenAdUnitId = 'ca-app-pub-3605518487927639/7526774448';
+const String rewardedAdUnitId = 'ca-app-pub-3605518487927639/1811413333';
+
+// Firebase Analytics instance
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
 Future<void> openInChrome(String url) async {
   final Uri uri = Uri.parse(url);
@@ -66,6 +65,36 @@ class _HomeScreenState extends State<HomeScreen> {
       const HistoryScreen(),
     ]);
     _checkAgreementStatus();
+    _logScreenView();
+  }
+
+  // Log screen view when home screen opens
+  Future<void> _logScreenView() async {
+    await _analytics.logScreenView(
+      screenName: 'HomeScreen',
+      screenClass: 'HomeScreen',
+    );
+  }
+
+  // Log bottom navigation tab changes
+  Future<void> _logTabChange(int index, String tabName) async {
+    await _analytics.logEvent(
+      name: 'tab_change',
+      parameters: {'tab_index': index, 'tab_name': tabName},
+    );
+  }
+
+  // Log disclaimer agreement
+  Future<void> _logDisclaimerAgreed() async {
+    await _analytics.logEvent(
+      name: 'disclaimer_agreed',
+      parameters: {'timestamp': DateTime.now().toIso8601String()},
+    );
+  }
+
+  // Log disclaimer cancelled
+  Future<void> _logDisclaimerCancelled() async {
+    await _analytics.logEvent(name: 'disclaimer_cancelled', parameters: {});
   }
 
   Future<void> _checkAgreementStatus() async {
@@ -88,6 +117,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('disclaimer_agreed', agreed);
     setState(() => _hasAgreed = agreed);
+
+    if (agreed) {
+      await _logDisclaimerAgreed();
+    } else {
+      await _logDisclaimerCancelled();
+    }
   }
 
   void _showDisclaimerDialog() {
@@ -324,7 +359,13 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+          String tabName = index == 0
+              ? 'Home'
+              : (index == 1 ? 'Watch' : 'Saved');
+          _logTabChange(index, tabName);
+        },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF0066ff),
@@ -386,6 +427,60 @@ class _BrowserScreenState extends State<_BrowserScreen> {
     _loadBannerAd();
     _loadMrecAd();
     _loadInterstitialAd();
+    _logScreenView();
+  }
+
+  // Log screen view for browser tab
+  Future<void> _logScreenView() async {
+    await _analytics.logScreenView(
+      screenName: 'BrowserTab',
+      screenClass: 'BrowserTab',
+    );
+  }
+
+  // Log when user pastes a link
+  Future<void> _logPasteLink() async {
+    await _analytics.logEvent(name: 'paste_link', parameters: {});
+  }
+
+  // FIXED: Log when user fetches video metadata - Convert boolean to num (1 or 0)
+  Future<void> _logFetchVideo(String url) async {
+    await _analytics.logEvent(
+      name: 'fetch_video',
+      parameters: {
+        'url_length': url.length,
+        'has_facebook': url.contains('facebook')
+            ? 1
+            : 0, // Convert boolean to num (1 for true, 0 for false)
+      },
+    );
+  }
+
+  // Log when video preview is shown
+  Future<void> _logVideoPreview(String? title, bool hasThumbnail) async {
+    await _analytics.logEvent(
+      name: 'video_preview_shown',
+      parameters: {
+        'has_title': title != null ? 1 : 0, // Convert boolean to num
+        'has_thumbnail': hasThumbnail ? 1 : 0, // Convert boolean to num
+      },
+    );
+  }
+
+  // Log when user clicks download from browser
+  Future<void> _logDownloadClick() async {
+    await _analytics.logEvent(
+      name: 'download_click_from_browser',
+      parameters: {},
+    );
+  }
+
+  // Log navigation to webview
+  Future<void> _logNavigateToWebView(String url) async {
+    await _analytics.logEvent(
+      name: 'navigate_to_webview',
+      parameters: {'from_screen': 'BrowserTab', 'url_length': url.length},
+    );
   }
 
   void _loadBannerAd() {
@@ -494,16 +589,19 @@ class _BrowserScreenState extends State<_BrowserScreen> {
         _title = metadata?.title ?? 'Video Preview';
         _imageUrl = metadata?.image;
       });
+      await _logVideoPreview(_title, _imageUrl != null);
     } catch (e) {
       setState(() {
         _title = 'Video Preview';
         _imageUrl = null;
       });
+      await _logVideoPreview(null, false);
     }
   }
 
   Future<void> _pasteLink() async {
     await _showInterstitialAd();
+    await _logPasteLink();
 
     if (mounted) {
       final data = await Clipboard.getData('text/plain');
@@ -536,6 +634,8 @@ class _BrowserScreenState extends State<_BrowserScreen> {
       );
       return;
     }
+
+    await _logFetchVideo(url);
 
     // Show interstitial ad before fetching video
     await _showInterstitialAd();
@@ -574,6 +674,8 @@ class _BrowserScreenState extends State<_BrowserScreen> {
       return;
     }
 
+    await _logNavigateToWebView(finalUrl);
+    await _logDownloadClick();
     await _showInterstitialAd();
 
     if (mounted) {
@@ -1130,7 +1232,6 @@ class _BrowserScreenState extends State<_BrowserScreen> {
   }
 }
 
-
 // ==================== WATCH SCREEN WITH BANNER AD ====================
 
 class _WatchScreenWithAd extends StatefulWidget {
@@ -1148,6 +1249,31 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
   void initState() {
     super.initState();
     _loadBannerAd();
+    _logScreenView();
+  }
+
+  // Log screen view for watch tab
+  Future<void> _logScreenView() async {
+    await _analytics.logScreenView(
+      screenName: 'WatchTab',
+      screenClass: 'WatchTab',
+    );
+  }
+
+  // Log when user opens Facebook from watch tab
+  Future<void> _logOpenFacebook() async {
+    await _analytics.logEvent(
+      name: 'open_facebook_from_watch_tab',
+      parameters: {},
+    );
+  }
+
+  // Log when user views help guide
+  Future<void> _logViewHelpGuide() async {
+    await _analytics.logEvent(
+      name: 'view_help_guide',
+      parameters: {'from_screen': 'WatchTab'},
+    );
   }
 
   void _loadBannerAd() {
@@ -1236,7 +1362,8 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.facebook, color: Colors.white, size: 22),
               ),
-              onPressed: () {
+              onPressed: () async {
+                await _logOpenFacebook();
                 openInChrome(AppEnv.facebookBaseUrl);
               },
               tooltip: localizations?.facebook ?? 'Facebook',
@@ -1364,7 +1491,8 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () {
+                                onPressed: () async {
+                                  await _logOpenFacebook();
                                   openInChrome(AppEnv.facebookBaseUrl);
                                 },
                                 label: Text(
@@ -1556,6 +1684,7 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: () {
+                            _logViewHelpGuide();
                             showDialog(
                               context: context,
                               builder: (context) => AlertDialog(

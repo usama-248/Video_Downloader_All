@@ -1,3 +1,6 @@
+
+
+// ignore_for_file: unused_local_variable, unused_element, unnecessary_null_comparison, unused_field
 // ignore_for_file: unused_local_variable, unused_element, unnecessary_null_comparison, unused_field
 import 'package:facebook_video_downloader/features/downloaders/download_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
@@ -267,10 +270,23 @@ class _WebViewScreenState extends State<WebViewScreen> {
     super.dispose();
   }
 
+  // ✅ FIXED: Removed MANAGE_EXTERNAL_STORAGE permission
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
-      await Permission.storage.request();
-      await Permission.manageExternalStorage.request();
+      // For Android 13+ (API 33+)
+      if (await Permission.photos.status.isDenied ||
+          await Permission.videos.status.isDenied) {
+        await [
+          Permission.photos,
+          Permission.videos,
+          Permission.audio,
+        ].request();
+      }
+
+      // For older Android versions (API 32 and below)
+      if (await Permission.storage.status.isDenied) {
+        await Permission.storage.request();
+      }
     }
   }
 
@@ -712,6 +728,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     }
   }
 
+  // ✅ FIXED: Save audio to app's documents directory
   Future<String?> _downloadAudioFile(
     String url,
     String fileName,
@@ -731,20 +748,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'Referer': AppEnv.facebookReferer,
       };
 
-      final String savePath;
-      if (Platform.isAndroid) {
-        final musicDir = Directory('/storage/emulated/0/Music');
-        if (await musicDir.exists()) {
-          savePath = path.join(musicDir.path, fileName);
-        } else {
-          final downloadsDir = Directory('/storage/emulated/0/Download');
-          savePath = path.join(downloadsDir.path, fileName);
-        }
-      } else {
-        final directory = await getApplicationDocumentsDirectory();
-        savePath = path.join(directory.path, fileName);
-      }
-
+      // Download to temp directory first
       final tempDir = await getTemporaryDirectory();
       final tempVideoPath = path.join(
         tempDir.path,
@@ -789,6 +793,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
           audioQuality = '4';
       }
 
+      // Create temp audio file path
+      final tempAudioPath = path.join(tempDir.path, fileName);
+
       final session = await FFmpegKit.executeWithArguments([
         '-y',
         '-i',
@@ -798,10 +805,11 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'libmp3lame',
         '-q:a',
         audioQuality,
-        savePath,
+        tempAudioPath,
       ]);
       final returnCode = await session.getReturnCode();
 
+      // Clean up temp video
       try {
         final tmp = File(tempVideoPath);
         if (await tmp.exists()) await tmp.delete();
@@ -809,7 +817,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
 
       if (!ReturnCode.isSuccess(returnCode)) {
         try {
-          final out = File(savePath);
+          final out = File(tempAudioPath);
           if (await out.exists()) await out.delete();
         } catch (_) {}
         debugPrint(
@@ -819,14 +827,24 @@ class _WebViewScreenState extends State<WebViewScreen> {
       }
 
       if (!mounted) return null;
-      final downloadController = context.read<DownloadController>();
 
-      final savedFile = File(savePath);
+      // ✅ Save to app's documents directory (no special permissions needed)
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final savedPath = path.join(documentsDir.path, fileName);
+      await File(tempAudioPath).copy(savedPath);
+
+      // Clean up temp audio
+      try {
+        await File(tempAudioPath).delete();
+      } catch (_) {}
+
+      final downloadController = context.read<DownloadController>();
+      final savedFile = File(savedPath);
       final actualSizeBytes = await savedFile.length();
 
       await downloadController.addToHistory(
         fileName: fileName,
-        filePath: savePath,
+        filePath: savedPath,
         videoUrl: url,
         quality: historyQualityLabel,
         actualFileSizeBytes: actualSizeBytes,
@@ -834,7 +852,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
       );
       await downloadController.loadHistory();
 
-      return savePath;
+      debugPrint('✅ Audio saved to: $savedPath');
+      return savedPath;
     } catch (e) {
       debugPrint('Audio extraction error: $e');
       return null;
@@ -1016,6 +1035,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
     return bestUrl.isEmpty ? detectedVideoUrl! : bestUrl;
   }
 
+  // ✅ FIXED: Save video to app's documents directory
   Future<String?> _downloadFile(
     String url,
     String fileName,
@@ -1032,19 +1052,9 @@ class _WebViewScreenState extends State<WebViewScreen> {
         'Referer': AppEnv.facebookReferer,
       };
 
-      String savePath;
-      if (Platform.isAndroid) {
-        final moviesDir = Directory('/storage/emulated/0/Movies');
-        if (await moviesDir.exists()) {
-          savePath = '${moviesDir.path}/$fileName';
-        } else {
-          final downloadsDir = Directory('/storage/emulated/0/Download');
-          savePath = '${downloadsDir.path}/$fileName';
-        }
-      } else {
-        final directory = await getApplicationDocumentsDirectory();
-        savePath = '${directory.path}/$fileName';
-      }
+      // Save to app's documents directory (no special permissions needed)
+      final documentsDir = await getApplicationDocumentsDirectory();
+      final savePath = path.join(documentsDir.path, fileName);
 
       await dio.download(
         url,
@@ -1217,24 +1227,14 @@ class _WebViewScreenState extends State<WebViewScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isAudio
-                                  ? (localizations?.saved_to_music ??
-                                        'Saved to:')
-                                  : (localizations?.saved_to_movies ??
-                                        'Saved to:'),
+                              'Saved to:',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              Platform.isAndroid
-                                  ? (isAudio
-                                        ? (localizations?.saved_to_music ??
-                                              'Music folder')
-                                        : (localizations?.saved_to_movies ??
-                                              'Movies folder'))
-                                  : 'Documents',
+                              'App Documents Folder',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.grey.shade600,

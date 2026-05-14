@@ -4,7 +4,9 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_saver
+  firebase_core
   flutter_localization
+  gal
   permission_handler_windows
   share_plus
   url_launcher_windows
