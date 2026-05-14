@@ -191,6 +191,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
 
+    print("HISTORY SCREEN REBUILD...");
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(

@@ -1387,6 +1387,8 @@ class _WebViewScreenState extends State<WebViewScreen> {
     final localizations = AppLocalizations.of(context);
     final percentage = (_downloadProgress * 100).toStringAsFixed(0);
 
+    print("WEBVIEW SCREEN REBUILD...");
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF0066ff),

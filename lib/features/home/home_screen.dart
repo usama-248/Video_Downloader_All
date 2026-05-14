@@ -355,6 +355,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    print("HOME SCREEN REBUILD.....");
+
     return Scaffold(
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
