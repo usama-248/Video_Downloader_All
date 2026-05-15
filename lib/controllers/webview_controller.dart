@@ -1,3 +1,7 @@
+
+
+// ignore_for_file: unnecessary_null_comparison, unused_field
+
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -15,13 +19,11 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/controllers/download_controller.dart';
 
-// Ad Unit IDs
 const String rewardedAdUnitId = 'ca-app-pub-3605518487927639/1811413333';
 const String interstitialAdUnitIdForDownload =
     'ca-app-pub-3605518487927639/3124495001';
 
 class WebViewControllerr extends GetxController {
-  // Observable variables
   var detectedVideoUrl = Rx<String?>(null);
   var isDownloading = false.obs;
   var downloadProgress = 0.0.obs;
@@ -33,7 +35,6 @@ class WebViewControllerr extends GetxController {
   var lastDownloadedFileName = Rx<String?>(null);
   var showAutoPopup = true.obs;
 
-  // File sizes
   var size1080p = Rx<String?>(null);
   var size720p = Rx<String?>(null);
   var size480p = Rx<String?>(null);
@@ -44,7 +45,6 @@ class WebViewControllerr extends GetxController {
   var audioSize320kbps = Rx<String?>(null);
   var isFetchingSizes = false.obs;
 
-  // Download tracking
   var receivedBytes = 0.obs;
   var actualTotalBytes = 0.obs;
   var totalKnown = false.obs;
@@ -55,7 +55,6 @@ class WebViewControllerr extends GetxController {
   var downloadIsAudio = false.obs;
   var downloadProgressIsLowQuality = false.obs;
 
-  // Non-observable
   late WebViewController webController;
   String? _pendingFilePath;
   String? _pendingFileName;
@@ -65,13 +64,11 @@ class WebViewControllerr extends GetxController {
   String? _pendingExpectedSize;
   Completer<void>? _interstitialAdCompleter;
 
-  // Ad variables
   RewardedAd? _rewardedAd;
   var isRewardedAdLoaded = false.obs;
   InterstitialAd? _interstitialAdForDownload;
   var isInterstitialAdForDownloadLoaded = false.obs;
 
-  // Speed calculation
   DateTime? _lastSpeedCalcTime;
   int _lastSpeedCalcBytes = 0;
   Timer? _speedTimer;
@@ -156,8 +153,7 @@ class WebViewControllerr extends GetxController {
           },
         ),
       );
-
-    _loadUrl();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadUrl());
   }
 
   void _resetFileSizes() {
@@ -243,11 +239,9 @@ class WebViewControllerr extends GetxController {
 
   void _onVideoDetected(String url) {
     if (detectedVideoUrl.value == url) return;
-
     detectedVideoUrl.value = url;
     isVideoDetected.value = true;
     _fetchFileSizes(url);
-
     Future.delayed(const Duration(seconds: 5), () {
       if (isVideoDetected.value && !isDownloading.value) {
         isVideoDetected.value = false;
@@ -257,7 +251,6 @@ class WebViewControllerr extends GetxController {
 
   Future<void> _fetchFileSizes(String videoUrl) async {
     isFetchingSizes.value = true;
-
     try {
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 10);
@@ -268,36 +261,30 @@ class WebViewControllerr extends GetxController {
         'Accept': '*/*',
         'Referer': AppEnv.facebookReferer,
       };
-
       try {
         final response = await dio.head(videoUrl);
         final contentLength = response.headers.value('content-length');
         if (contentLength != null) {
           final bytes = int.parse(contentLength);
           final estimatedDurationSeconds = bytes / 437500;
-
           size1080p.value = _formatFileSize(bytes);
           size720p.value = _formatFileSize((bytes * 0.7).round());
           size480p.value = _formatFileSize((bytes * 0.45).round());
           size360p.value = _formatFileSize((bytes * 0.3).round());
           size144p.value = _formatFileSize((bytes * 0.12).round());
-
           final audioSize128Bytes = (estimatedDurationSeconds * 128 * 1024 / 8)
               .round();
           final audioSize320Bytes = (estimatedDurationSeconds * 320 * 1024 / 8)
               .round();
-
           audioSize128kbps.value = _formatFileSize(audioSize128Bytes);
           audioSize320kbps.value = _formatFileSize(audioSize320Bytes);
         } else {
           _setDefaultSizes();
         }
       } catch (e) {
-        debugPrint('Error fetching file sizes: $e');
         _setDefaultSizes();
       }
     } catch (e) {
-      debugPrint('Error fetching file sizes: $e');
       _setDefaultSizes();
     } finally {
       isFetchingSizes.value = false;
@@ -342,9 +329,7 @@ class WebViewControllerr extends GetxController {
               ad.dispose();
               _loadRewardedAd();
               isRewardedAdLoaded.value = false;
-              if (_pendingFilePath != null) {
-                _navigateToHistory();
-              }
+              if (_pendingFilePath != null) _navigateToHistory();
             },
           );
           update();
@@ -415,7 +400,7 @@ class WebViewControllerr extends GetxController {
     );
   }
 
-  void _showRewardedAdForHistory(
+  void showRewardedAdForHistory(
     String filePath,
     String fileName,
     bool isAudio,
@@ -423,18 +408,19 @@ class WebViewControllerr extends GetxController {
     _pendingFilePath = filePath;
     _pendingFileName = fileName;
     _isAudioPending = isAudio;
-
     if (isRewardedAdLoaded.value && _rewardedAd != null) {
       _rewardedAd!.show(
-        onUserEarnedReward: (ad, reward) {
-          print('User earned reward: ${reward.amount} ${reward.type}');
-          _navigateToHistory();
-        },
+        onUserEarnedReward: (ad, reward) => _navigateToHistory(),
       );
     } else {
-      print('Rewarded ad not ready, navigating without reward');
       _navigateToHistory();
     }
+  }
+
+  void _navigateToHistory() {
+    Get.toNamed('/history');
+    _pendingFilePath = null;
+    _pendingFileName = null;
   }
 
   Future<void> _showInterstitialAdBeforeDownload(
@@ -445,7 +431,6 @@ class WebViewControllerr extends GetxController {
     _pendingTier = tier;
     _pendingHistoryLabel = historyLabel;
     _pendingExpectedSize = expectedSize;
-
     if (isInterstitialAdForDownloadLoaded.value &&
         _interstitialAdForDownload != null) {
       _interstitialAdCompleter = Completer<void>();
@@ -467,14 +452,6 @@ class WebViewControllerr extends GetxController {
     } else {
       await _downloadVideo(tier, historyLabel, expectedSize);
     }
-  }
-
-  void _navigateToHistory() {
-    if (Get.context != null) {
-      Get.toNamed('/history');
-    }
-    _pendingFilePath = null;
-    _pendingFileName = null;
   }
 
   void _resetProgressState(
@@ -528,12 +505,10 @@ class WebViewControllerr extends GetxController {
 
   void _updateProgress(int received, int total) {
     receivedBytes.value = received;
-
     if (total > 0 && total != -1) {
       actualTotalBytes.value = total;
       totalKnown.value = true;
       downloadProgress.value = (received / total).clamp(0.0, 1.0);
-
       String statusText = '';
       final remaining = actualTotalBytes.value - receivedBytes.value;
       if (remaining > 0 &&
@@ -582,7 +557,6 @@ class WebViewControllerr extends GetxController {
     String bitrate,
   ) async {
     if (detectedVideoUrl.value == null) return;
-
     _resetProgressState(
       historyQualityLabel,
       expectedSize: audioSize,
@@ -590,10 +564,8 @@ class WebViewControllerr extends GetxController {
     );
     downloadStatus.value = 'Extracting audio from video...';
     _startSpeedTimer();
-
     final fileName =
         'audio_${DateTime.now().millisecondsSinceEpoch}_${bitrate}kbps.mp3';
-
     try {
       final savePath = await _downloadAudioFile(
         detectedVideoUrl.value!,
@@ -602,7 +574,6 @@ class WebViewControllerr extends GetxController {
         bitrate,
       );
       _stopSpeedTimer();
-
       if (savePath != null) {
         isDownloading.value = false;
         lastDownloadedFilePath.value = savePath;
@@ -636,13 +607,11 @@ class WebViewControllerr extends GetxController {
         'Accept': '*/*',
         'Referer': AppEnv.facebookReferer,
       };
-
       final tempDir = await getTemporaryDirectory();
       final tempVideoPath = path.join(
         tempDir.path,
         'vd_audio_src_${DateTime.now().millisecondsSinceEpoch}.mp4',
       );
-
       await dio.download(
         url,
         tempVideoPath,
@@ -650,25 +619,12 @@ class WebViewControllerr extends GetxController {
           _updateProgress(received, total);
         },
       );
-
       downloadProgress.value = 0.0;
       totalKnown.value = false;
       downloadStatus.value = 'Converting to MP3...';
 
-      String audioQuality;
-      switch (bitrate) {
-        case '320':
-          audioQuality = '0';
-          break;
-        case '128':
-          audioQuality = '4';
-          break;
-        default:
-          audioQuality = '4';
-      }
-
+      String audioQuality = bitrate == '320' ? '0' : '4';
       final tempAudioPath = path.join(tempDir.path, fileName);
-
       final session = await FFmpegKit.executeWithArguments([
         '-y',
         '-i',
@@ -681,25 +637,20 @@ class WebViewControllerr extends GetxController {
         tempAudioPath,
       ]);
       final returnCode = await session.getReturnCode();
-
       try {
-        final tmp = File(tempVideoPath);
-        if (await tmp.exists()) await tmp.delete();
+        await File(tempVideoPath).delete();
       } catch (_) {}
 
       if (!ReturnCode.isSuccess(returnCode)) {
         try {
-          final out = File(tempAudioPath);
-          if (await out.exists()) await out.delete();
+          await File(tempAudioPath).delete();
         } catch (_) {}
-        debugPrint('FFmpeg MP3 conversion failed');
         return null;
       }
 
       final documentsDir = await getApplicationDocumentsDirectory();
       final savedPath = path.join(documentsDir.path, fileName);
       await File(tempAudioPath).copy(savedPath);
-
       try {
         await File(tempAudioPath).delete();
       } catch (_) {}
@@ -707,7 +658,6 @@ class WebViewControllerr extends GetxController {
       final downloadController = Get.find<DownloadController>();
       final savedFile = File(savedPath);
       final actualSizeBytes = await savedFile.length();
-
       await downloadController.addToHistory(
         fileName: fileName,
         filePath: savedPath,
@@ -717,11 +667,8 @@ class WebViewControllerr extends GetxController {
         estimatedSize: selectedDownloadSize.value,
       );
       await downloadController.loadHistory();
-
-      debugPrint('✅ Audio saved to: $savedPath');
       return savedPath;
     } catch (e) {
-      debugPrint('Audio extraction error: $e');
       return null;
     }
   }
@@ -732,7 +679,6 @@ class WebViewControllerr extends GetxController {
     String? expectedSize,
   ) async {
     if (detectedVideoUrl.value == null) return;
-
     bool isLowQuality = quality == '144p' || quality == '360p';
     _resetProgressState(
       historyQualityLabel,
@@ -741,13 +687,10 @@ class WebViewControllerr extends GetxController {
     );
     downloadStatus.value = 'Preparing download...';
     _startSpeedTimer();
-
     String fileName =
         'video_${DateTime.now().millisecondsSinceEpoch}_$quality.mp4';
-
     try {
       String videoUrl = detectedVideoUrl.value!;
-
       final qualityUrl = await _findQualityVideo(quality);
       if (qualityUrl.isNotEmpty && qualityUrl.startsWith('http')) {
         videoUrl = qualityUrl;
@@ -756,14 +699,12 @@ class WebViewControllerr extends GetxController {
         downloadStatus.value =
             '$quality not available, downloading best available...';
       }
-
       final savePath = await _downloadFile(
         videoUrl,
         fileName,
         historyQualityLabel,
       );
       _stopSpeedTimer();
-
       if (savePath != null) {
         isDownloading.value = false;
         lastDownloadedFilePath.value = savePath;
@@ -781,16 +722,13 @@ class WebViewControllerr extends GetxController {
 
   Future<String> _findQualityVideo(String quality) async {
     String bestUrl = '';
-
     try {
       final qualityNum = quality.replaceAll('p', '');
-
       final jsResult = await webController.runJavaScriptReturningResult('''
         (function() {
           let bestMatchUrl = '';
           let qualityScore = 0;
           const targetQuality = $qualityNum;
-          
           const videos = document.querySelectorAll('video');
           for (const video of videos) {
             if (video.src && video.src.startsWith('http')) {
@@ -801,14 +739,12 @@ class WebViewControllerr extends GetxController {
               else if (video.src.includes('360')) q = 360;
               else if (video.src.includes('240')) q = 240;
               else if (video.src.includes('144')) q = 144;
-              
               if (q === targetQuality) return video.src;
               if (q > 0 && (bestMatchUrl === '' || Math.abs(q - targetQuality) < Math.abs(qualityScore - targetQuality))) {
                 bestMatchUrl = video.src;
                 qualityScore = q;
               }
             }
-            
             const sources = video.querySelectorAll('source');
             for (const source of sources) {
               if (source.src && source.src.startsWith('http')) {
@@ -819,7 +755,6 @@ class WebViewControllerr extends GetxController {
                 else if (source.src.includes('360')) q = 360;
                 else if (source.src.includes('240')) q = 240;
                 else if (source.src.includes('144')) q = 144;
-                
                 if (q === targetQuality) return source.src;
                 if (q > 0 && (bestMatchUrl === '' || Math.abs(q - targetQuality) < Math.abs(qualityScore - targetQuality))) {
                   bestMatchUrl = source.src;
@@ -828,42 +763,17 @@ class WebViewControllerr extends GetxController {
               }
             }
           }
-          
-          const qualitySelectors = {
-            '1080': ['[data-1080p-url]', '[data-uhd-url]', '[data-fhd-url]'],
-            '720': ['[data-720p-url]', '[data-hd-url]'],
-            '480': ['[data-480p-url]', '[data-sd-url]'],
-            '360': ['[data-360p-url]'],
-            '144': ['[data-144p-url]']
-          };
-          
-          const selectors = qualitySelectors[targetQuality.toString()] || [];
-          for (const selector of selectors) {
-            const elements = document.querySelectorAll(selector);
-            for (const element of elements) {
-              const url = element.getAttribute(selector.replace(/[\[\]]/g, ''));
-              if (url && url.startsWith('http')) return url;
-            }
-          }
-          
           return bestMatchUrl;
         })();
       ''');
-
       if (jsResult != null &&
           jsResult.toString().isNotEmpty &&
           jsResult.toString() != 'null' &&
           jsResult.toString() != '') {
         String foundUrl = jsResult.toString();
-        if (foundUrl.startsWith('http')) {
-          debugPrint('Found $quality URL: $foundUrl');
-          return foundUrl;
-        }
+        if (foundUrl.startsWith('http')) return foundUrl;
       }
-    } catch (e) {
-      debugPrint('Error finding $quality quality video: $e');
-    }
-
+    } catch (e) {}
     return bestUrl.isEmpty ? detectedVideoUrl.value! : bestUrl;
   }
 
@@ -875,17 +785,14 @@ class WebViewControllerr extends GetxController {
     try {
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 30);
-      dio.options.receiveTimeout = const Duration(minutes: 5);
       dio.options.headers = {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
         'Referer': AppEnv.facebookReferer,
       };
-
       final tempDir = await getTemporaryDirectory();
       final tempPath = path.join(tempDir.path, fileName);
-
       await dio.download(
         url,
         tempPath,
@@ -893,30 +800,22 @@ class WebViewControllerr extends GetxController {
           _updateProgress(received, total);
         },
       );
-
       bool gallerySaved = false;
       try {
         final hasAccess = await Gal.hasAccess();
-        if (!hasAccess) {
-          await Gal.requestAccess();
-        }
+        if (!hasAccess) await Gal.requestAccess();
         await Gal.putVideo(tempPath);
         gallerySaved = true;
-        debugPrint('✅ Video saved to gallery: $fileName');
         Get.snackbar(
           'Success',
           '✓ Video saved to Gallery',
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-      } catch (e) {
-        debugPrint('Failed to save to gallery: $e');
-        gallerySaved = false;
-      }
+      } catch (e) {}
 
       final downloadController = Get.find<DownloadController>();
       final actualSizeBytes = await File(tempPath).length();
-
       await downloadController.addToHistory(
         fileName: fileName,
         filePath: tempPath,
@@ -926,14 +825,10 @@ class WebViewControllerr extends GetxController {
         estimatedSize: selectedDownloadSize.value,
       );
       await downloadController.loadHistory();
-
-      if (!gallerySaved) {
+      if (!gallerySaved)
         Get.snackbar('Info', 'Video saved to app folder: $fileName');
-      }
-
       return tempPath;
     } catch (e) {
-      debugPrint('Download error: $e');
       return null;
     }
   }
@@ -946,7 +841,6 @@ class WebViewControllerr extends GetxController {
     final actualFile = File(filePath);
     final actualSizeBytes = await actualFile.length();
     final actualSizeStr = _formatFileSize(actualSizeBytes);
-
     Get.dialog(
       Dialog(
         backgroundColor: Colors.white,
@@ -1087,7 +981,7 @@ class WebViewControllerr extends GetxController {
                     child: OutlinedButton(
                       onPressed: () {
                         Get.back();
-                        _showRewardedAdForHistory(filePath, fileName, isAudio);
+                        showRewardedAdForHistory(filePath, fileName, isAudio);
                       },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFF0066ff)),
@@ -1104,7 +998,7 @@ class WebViewControllerr extends GetxController {
                     child: ElevatedButton(
                       onPressed: () {
                         Get.back();
-                        _showRewardedAdForHistory(filePath, fileName, isAudio);
+                        showRewardedAdForHistory(filePath, fileName, isAudio);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0066ff),
@@ -1184,7 +1078,6 @@ class WebViewControllerr extends GetxController {
       Get.snackbar('No Video', 'No video detected yet. Please wait.');
       return;
     }
-
     Get.bottomSheet(
       _DownloadQualityBottomSheet(
         isFetchingSizes: isFetchingSizes.value,
@@ -1197,7 +1090,9 @@ class WebViewControllerr extends GetxController {
         audioSize192kbps: audioSize192kbps.value,
         audioSize320kbps: audioSize320kbps.value,
         onWatch: () => Get.back(),
-        onDownloadTier: onDownloadTierSelected,
+        onDownloadTier: (tier, label, size) async {
+          await onDownloadTierSelected(tier, label, size);
+        },
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1456,9 +1351,9 @@ class _DownloadQualityBottomSheetState
               size: widget.size360p ?? 'Calculating...',
               icon: Icons.sd_storage,
               gradient: const LinearGradient(
-                colors: [Color.fromARGB(255, 69, 86, 99), Color(0xFFEEF2F3)],
+                colors: [Color(0xFF455463), Color(0xFFEEF2F3)],
               ),
-              color: const Color.fromARGB(255, 69, 86, 99),
+              color: const Color(0xFF455463),
               isLoading: widget.isFetchingSizes && widget.size360p == null,
               isSelected: _isSelected(_k360p),
               onTap: () => setState(() => _picked = _k360p),
@@ -1701,7 +1596,7 @@ class _DownloadTierOptionCard extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
+                        valueColor: AlwaysStoppedAnimation(
                           color.withOpacity(0.6),
                         ),
                       ),

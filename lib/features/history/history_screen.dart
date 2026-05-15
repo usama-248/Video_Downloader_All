@@ -1,4 +1,3 @@
-
 import 'dart:io';
 
 import 'package:facebook_video_downloader/core/config/app_env.dart';
@@ -178,6 +177,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('History Screen build...');
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(

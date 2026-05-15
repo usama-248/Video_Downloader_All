@@ -1,18 +1,12 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 
 class UrlInput extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSearch;
 
-  const UrlInput({
-    Key? key,
-    required this.controller,
-    required this.onSearch,
-  }) : super(key: key);
+  const UrlInput({Key? key, required this.controller, required this.onSearch})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
