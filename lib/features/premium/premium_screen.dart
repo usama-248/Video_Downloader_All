@@ -1,17 +1,17 @@
+
+
 // ignore_for_file: invalid_null_aware_operator
 
-import 'package:facebook_video_downloader/features/home/home_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:facebook_video_downloader/l10n/app_localizations.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:facebook_video_downloader/features/home/home_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
   const PremiumScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       body: Stack(
@@ -21,9 +21,8 @@ class PremiumScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                const SizedBox(
-                  height: 60,
-                ), // Increased top padding to avoid icon overlap
+                const SizedBox(height: 60),
+
                 // 🔶 Premium Icon
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -49,7 +48,7 @@ class PremiumScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 Text(
-                  localizations?.startLikeAPro ?? "START LIKE A PRO",
+                  'START LIKE A PRO'.tr,
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -58,8 +57,8 @@ class PremiumScreen extends StatelessWidget {
 
                 const SizedBox(height: 6),
 
-                Text(
-                  localizations?.unlockFeatures ?? "Unlock All Features",
+                Text( 
+                  'Unlock All Features'.tr,
                   style: const TextStyle(fontSize: 15, color: Colors.grey),
                 ),
 
@@ -82,37 +81,22 @@ class PremiumScreen extends StatelessWidget {
                     children: [
                       _featureItem(
                         Icons.download,
-                        localizations?.featureUnlimited ??
-                            "Unlimited Video Downloads",
+                        'Feature Unlimited'.tr,
                         true,
                       ),
-                      _featureItem(
-                        Icons.hd,
-                        localizations?.featureHD ?? "Download in HD Quality",
-                        true,
-                      ),
-                      _featureItem(
-                        Icons.flash_on,
-                        localizations?.featureFast ??
-                            "Ultra-Fast Download Speed",
-                        false,
-                      ),
+                      _featureItem(Icons.hd, 'Feature HD'.tr, true),
+                      _featureItem(Icons.flash_on, 'Feature Fast'.tr, false),
                       _featureItem(
                         Icons.trending_up,
-                        localizations?.featureTrending ?? "Watch Trending",
+                        'Feature Trending'.tr,
                         true,
                       ),
                       _featureItem(
                         Icons.all_inclusive,
-                        localizations?.featureAnything ?? "Download Anything",
+                        'Feature Anything'.tr,
                         true,
                       ),
-                      _featureItem(
-                        Icons.block,
-                        localizations?.featureUnlimited ??
-                            "Ads Free Experience",
-                        false,
-                      ),
+                      _featureItem(Icons.block, 'Feature Ad-Free'.tr, false),
                     ],
                   ),
                 ),
@@ -180,10 +164,10 @@ class PremiumScreen extends StatelessWidget {
                     color: Colors.blue.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      "3 Days Free Trial Included 🎉",
-                      style: TextStyle(
+                      'Free Trial Included'.tr,
+                      style: const TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,
                       ),
@@ -194,8 +178,7 @@ class PremiumScreen extends StatelessWidget {
                 const SizedBox(height: 15),
 
                 Text(
-                  localizations?.disclaimerContent ??
-                      "After trial, subscription applies. Cancel anytime.",
+                  'Disclaimer Content'.tr,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
@@ -204,7 +187,7 @@ class PremiumScreen extends StatelessWidget {
 
                 // 🚀 CTA BUTTON
                 GestureDetector(
-                  onTap: () => _startFreeTrial(context, localizations),
+                  onTap: () => _startFreeTrial(),
                   child: Container(
                     height: 58,
                     width: double.infinity,
@@ -222,8 +205,7 @@ class PremiumScreen extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        localizations?.freeTrial?.toUpperCase() ??
-                            "START FREE TRIAL",
+                        'Free Trial'.tr.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 17,
@@ -261,10 +243,9 @@ class PremiumScreen extends StatelessWidget {
             top: 40,
             right: 16,
             child: GestureDetector(
-              onTap: () => _skipToHome(context),
+              onTap: () => _skipToHome(),
               child: Container(
                 padding: const EdgeInsets.all(8),
-
                 child: const Icon(
                   Icons.close,
                   color: Color.fromARGB(255, 117, 115, 115),
@@ -297,58 +278,45 @@ class PremiumScreen extends StatelessWidget {
   }
 
   // Skip to Home directly
-  void _skipToHome(BuildContext context) async {
+  Future<void> _skipToHome() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_premium', true);
 
-    if (context.mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    }
+    Get.offAll(() => const HomeScreen());
   }
 
   // Start free trial and go to Home
-  void _startFreeTrial(
-    BuildContext context,
-    AppLocalizations? localizations,
-  ) async {
-    showDialog(
-      context: context,
+  Future<void> _startFreeTrial() async {
+    // Show loading dialog
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
     // TODO: Add actual payment processing here
     await Future.delayed(const Duration(seconds: 2));
 
-    if (context.mounted) {
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            localizations?.processing_link ?? "Premium activated successfully!",
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_premium_user', true);
-      await prefs.setBool('has_seen_premium', true);
-
-      // Go to Home after premium activation
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      }
+    // Close loading dialog
+    if (Get.context != null) {
+      Get.back();
     }
+
+    // Show success message
+    Get.snackbar(
+      'premiumActivated'.tr,
+      'premiumSuccessMessage'.tr,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
+    );
+
+    // Save premium status
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_premium_user', true);
+    await prefs.setBool('has_seen_premium', true);
+
+    // Go to Home after premium activation
+    Get.offAll(() => const HomeScreen());
   }
 }
-
-
-

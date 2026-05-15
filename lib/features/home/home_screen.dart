@@ -1,699 +1,74 @@
 
-// ignore_for_file: unused_local_variable
-
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:metadata_fetch/metadata_fetch.dart';
-import 'package:facebook_video_downloader/core/config/app_env.dart';
-import 'package:facebook_video_downloader/l10n/app_localizations.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:get/get.dart';
+import 'package:facebook_video_downloader/controllers/home_controller.dart';
+import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:facebook_video_downloader/core/strings.dart';
 
-import '../webview/webview_screen.dart';
-import '../history/history_screen.dart';
-import '../premium/premium_screen.dart';
-import '../settings/settings_screen.dart';
-
-// Add your REAL AdMob ad unit IDs here
-const String bannerAdUnitId = 'ca-app-pub-3605518487927639/8115755781';
-const String mrecAdUnitId = 'ca-app-pub-3605518487927639/6802674114';
-const String watchScreenBannerAdUnitId =
-    'ca-app-pub-3605518487927639/8115755781';
-const String interstitialAdUnitId = 'ca-app-pub-3605518487927639/3124495001';
-const String appOpenAdUnitId = 'ca-app-pub-3605518487927639/7526774448';
-const String rewardedAdUnitId = 'ca-app-pub-3605518487927639/1811413333';
-
-// Firebase Analytics instance
-final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-
-Future<void> openInChrome(String url) async {
-  final Uri uri = Uri.parse(url);
-  try {
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch $url';
-    }
-  } catch (e) {
-    print('Error opening URL: $e');
-  }
-}
-
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  Widget build(BuildContext context) {
+    final controller = Get.put(HomeController());
 
-class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
-  bool _hasAgreed = false;
-  bool _isLoading = true;
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
 
-  final List<Widget> _screens = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _screens.addAll([
-      const _BrowserScreen(),
-      const _WatchScreenWithAd(),
-      const HistoryScreen(),
-    ]);
-    _checkAgreementStatus();
-    _logScreenView();
-  }
-
-  // Log screen view when home screen opens
-  Future<void> _logScreenView() async {
-    await _analytics.logScreenView(
-      screenName: 'HomeScreen',
-      screenClass: 'HomeScreen',
-    );
-  }
-
-  // Log bottom navigation tab changes
-  Future<void> _logTabChange(int index, String tabName) async {
-    await _analytics.logEvent(
-      name: 'tab_change',
-      parameters: {'tab_index': index, 'tab_name': tabName},
-    );
-  }
-
-  // Log disclaimer agreement
-  Future<void> _logDisclaimerAgreed() async {
-    await _analytics.logEvent(
-      name: 'disclaimer_agreed',
-      parameters: {'timestamp': DateTime.now().toIso8601String()},
-    );
-  }
-
-  // Log disclaimer cancelled
-  Future<void> _logDisclaimerCancelled() async {
-    await _analytics.logEvent(name: 'disclaimer_cancelled', parameters: {});
-  }
-
-  Future<void> _checkAgreementStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasAgreedBefore = prefs.getBool('disclaimer_agreed') ?? false;
-
-    setState(() {
-      _hasAgreed = hasAgreedBefore;
-      _isLoading = false;
-    });
-
-    if (!_hasAgreed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showDisclaimerDialog();
-      });
-    }
-  }
-
-  Future<void> _saveAgreementStatus(bool agreed) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('disclaimer_agreed', agreed);
-    setState(() => _hasAgreed = agreed);
-
-    if (agreed) {
-      await _logDisclaimerAgreed();
-    } else {
-      await _logDisclaimerCancelled();
-    }
-  }
-
-  void _showDisclaimerDialog() {
-    if (_hasAgreed) return;
-
-    final localizations = AppLocalizations.of(context);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+      return Scaffold(
+        body: IndexedStack(
+          index: controller.currentIndex.value,
+          children: [
+            const _BrowserScreen(),
+            const _WatchScreenWithAd(),
+            const HistoryScreen(),
+          ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: controller.currentIndex.value,
+          onTap: controller.changeTab,
+          type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
-          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-          contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0066ff).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Image.asset(
-                      'assets/images/Disclaimer.png',
-                      width: 28,
-                      height: 28,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Color(0xFF0066ff),
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    localizations?.disclaimerTitle ?? 'Disclaimer',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
+          selectedItemColor: const Color(0xFF0066ff),
+          unselectedItemColor: Colors.grey,
+          items: [
+            BottomNavigationBarItem(
+              icon: const ImageIcon(
+                AssetImage('assets/images/Home.png'),
+                size: 24,
               ),
-              const SizedBox(height: 8),
-              Container(height: 2, color: Colors.grey.shade200),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 6,
-                    horizontal: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0066ff).withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.priority_high,
-                        size: 16,
-                        color: const Color(0xFF0066ff),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Attention Please',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF0066ff),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  localizations?.disclaimerContent ??
-                      'Please get the permissions from the owner before reposting videos. Any unauthorized actions (re-uploading or downloading of contents) and/or violations of intellectual property rights is the sole responsibility of the user.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Image.asset(
-                            'assets/images/FileSave.png',
-                            width: 18,
-                            height: 18,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.cloud_off,
-                              size: 18,
-                              color: Colors.green.shade700,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'We will not upload or store any of your downloaded or personal data.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade700,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Image.asset(
-                            'assets/images/Privacyicon.png',
-                            width: 18,
-                            height: 18,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.security,
-                              size: 18,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'We are also not collecting and/or transmitting any of your personal or sensitive data from your device.',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade700,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
+              label: 'Home'.tr,
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => SystemNavigator.pop(),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                backgroundColor: Colors.grey.shade100,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+            BottomNavigationBarItem(
+              icon: const ImageIcon(
+                AssetImage('assets/images/Watch_Video.png'),
+                size: 24,
               ),
-              child: Text(
-                localizations?.cancel ?? 'Cancel',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.red,
-                ),
-              ),
+              label: 'Watch'.tr,
             ),
-            ElevatedButton(
-              onPressed: () async {
-                await _saveAgreementStatus(true);
-                if (mounted) Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 12,
-                ),
-                backgroundColor: const Color(0xFF0066ff),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                elevation: 0,
+            BottomNavigationBarItem(
+              icon: const ImageIcon(
+                AssetImage('assets/images/FileSave.png'),
+                size: 24,
               ),
-              child: Text(
-                localizations?.ok ?? 'Agree',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              label: 'Saved'.tr,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    return Scaffold(
-      body: _screens[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-          String tabName = index == 0
-              ? 'Home'
-              : (index == 1 ? 'Watch' : 'Saved');
-          _logTabChange(index, tabName);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF0066ff),
-        unselectedItemColor: Colors.grey,
-        items: [
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              const AssetImage('assets/images/Home.png'),
-              size: 24,
-            ),
-            label: localizations?.browserTab ?? 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              const AssetImage('assets/images/Watch_Video.png'),
-              size: 24,
-            ),
-            label: localizations?.watchTab ?? 'Watch',
-          ),
-          BottomNavigationBarItem(
-            icon: ImageIcon(
-              const AssetImage('assets/images/FileSave.png'),
-              size: 24,
-            ),
-            label: localizations?.savedTab ?? 'Saved',
-          ),
-        ],
-      ),
-    );
+      );
+    });
   }
 }
 
-// ==================== BROWSER SCREEN WITH BANNER, MREC AND INTERSTITIAL ADS ====================
-class _BrowserScreen extends StatefulWidget {
+// ==================== BROWSER SCREEN ====================
+class _BrowserScreen extends GetView<HomeController> {
   const _BrowserScreen();
 
   @override
-  State<_BrowserScreen> createState() => _BrowserScreenState();
-}
-
-class _BrowserScreenState extends State<_BrowserScreen> {
-  final TextEditingController _urlController = TextEditingController();
-  String? _title;
-  String? _imageUrl;
-  bool _isFetching = false;
-  bool _showVideoPreview = false;
-  BannerAd? _bannerAd;
-  BannerAd? _mrecAd;
-  InterstitialAd? _interstitialAd;
-  bool _isBannerLoaded = false;
-  bool _isMrecLoaded = false;
-  bool _isInterstitialLoaded = false;
-
-  Completer<void>? _adCompleter;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBannerAd();
-    _loadMrecAd();
-    _loadInterstitialAd();
-    _logScreenView();
-  }
-
-  // Log screen view for browser tab
-  Future<void> _logScreenView() async {
-    await _analytics.logScreenView(
-      screenName: 'BrowserTab',
-      screenClass: 'BrowserTab',
-    );
-  }
-
-  // Log when user pastes a link
-  Future<void> _logPasteLink() async {
-    await _analytics.logEvent(name: 'paste_link', parameters: {});
-  }
-
-  // FIXED: Log when user fetches video metadata - Convert boolean to num (1 or 0)
-  Future<void> _logFetchVideo(String url) async {
-    await _analytics.logEvent(
-      name: 'fetch_video',
-      parameters: {
-        'url_length': url.length,
-        'has_facebook': url.contains('facebook')
-            ? 1
-            : 0, // Convert boolean to num (1 for true, 0 for false)
-      },
-    );
-  }
-
-  // Log when video preview is shown
-  Future<void> _logVideoPreview(String? title, bool hasThumbnail) async {
-    await _analytics.logEvent(
-      name: 'video_preview_shown',
-      parameters: {
-        'has_title': title != null ? 1 : 0, // Convert boolean to num
-        'has_thumbnail': hasThumbnail ? 1 : 0, // Convert boolean to num
-      },
-    );
-  }
-
-  // Log when user clicks download from browser
-  Future<void> _logDownloadClick() async {
-    await _analytics.logEvent(
-      name: 'download_click_from_browser',
-      parameters: {},
-    );
-  }
-
-  // Log navigation to webview
-  Future<void> _logNavigateToWebView(String url) async {
-    await _analytics.logEvent(
-      name: 'navigate_to_webview',
-      parameters: {'from_screen': 'BrowserTab', 'url_length': url.length},
-    );
-  }
-
-  void _loadBannerAd() {
-    _bannerAd = BannerAd(
-      adUnitId: bannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          setState(() {
-            _isBannerLoaded = true;
-          });
-        },
-        onAdFailedToLoad: (ad, error) {
-          print('BannerAd failed to load: $error');
-          ad.dispose();
-          setState(() {
-            _isBannerLoaded = false;
-          });
-        },
-      ),
-    )..load();
-  }
-
-  void _loadMrecAd() {
-    _mrecAd = BannerAd(
-      adUnitId: mrecAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.mediumRectangle,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          setState(() {
-            _isMrecLoaded = true;
-          });
-        },
-        onAdFailedToLoad: (ad, error) {
-          print('MREC Ad failed to load: $error');
-          ad.dispose();
-          setState(() {
-            _isMrecLoaded = false;
-          });
-        },
-      ),
-    )..load();
-  }
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          _isInterstitialLoaded = true;
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              if (_adCompleter != null && !_adCompleter!.isCompleted) {
-                _adCompleter!.complete();
-              }
-              ad.dispose();
-              _loadInterstitialAd();
-              _isInterstitialLoaded = false;
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              if (_adCompleter != null && !_adCompleter!.isCompleted) {
-                _adCompleter!.complete();
-              }
-              ad.dispose();
-              _loadInterstitialAd();
-              _isInterstitialLoaded = false;
-            },
-          );
-          setState(() {});
-        },
-        onAdFailedToLoad: (error) {
-          print('InterstitialAd failed to load: $error');
-          _isInterstitialLoaded = false;
-        },
-      ),
-    );
-  }
-
-  Future<void> _showInterstitialAd() async {
-    if (_isInterstitialLoaded && _interstitialAd != null) {
-      _adCompleter = Completer<void>();
-      _interstitialAd!.show();
-      await _adCompleter!.future;
-    }
-    return;
-  }
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    _mrecAd?.dispose();
-    _interstitialAd?.dispose();
-    super.dispose();
-  }
-
-  Future<void> _fetchMetadata(String url) async {
-    if (url.isEmpty || !url.contains(AppEnv.facebookHost)) return;
-
-    try {
-      final metadata = await MetadataFetch.extract(url);
-      setState(() {
-        _title = metadata?.title ?? 'Video Preview';
-        _imageUrl = metadata?.image;
-      });
-      await _logVideoPreview(_title, _imageUrl != null);
-    } catch (e) {
-      setState(() {
-        _title = 'Video Preview';
-        _imageUrl = null;
-      });
-      await _logVideoPreview(null, false);
-    }
-  }
-
-  Future<void> _pasteLink() async {
-    await _showInterstitialAd();
-    await _logPasteLink();
-
-    if (mounted) {
-      final data = await Clipboard.getData('text/plain');
-      if (data?.text != null && data!.text!.isNotEmpty) {
-        _urlController.text = data.text!;
-
-        final localizations = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Link pasted successfully!'),
-            duration: const Duration(seconds: 1),
-          ),
-        );
-      }
-    }
-  }
-
-  // Fetch video button handler with interstitial ad
-  Future<void> _onFetchVideo() async {
-    String url = _urlController.text.trim();
-
-    if (url.isEmpty) {
-      final localizations = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            localizations?.please_paste_link ?? 'Please paste a link first',
-          ),
-        ),
-      );
-      return;
-    }
-
-    await _logFetchVideo(url);
-
-    // Show interstitial ad before fetching video
-    await _showInterstitialAd();
-
-    // Only proceed with fetching after ad is dismissed
-    if (mounted) {
-      setState(() {
-        _showVideoPreview = true;
-        _isFetching = true;
-      });
-
-      // Fetch metadata
-      if (!url.startsWith('http')) {
-        url = 'https://$url';
-      }
-
-      await _fetchMetadata(url);
-
-      setState(() {
-        _isFetching = false;
-      });
-    }
-  }
-
-  Future<void> _navigateToWebView(BuildContext context, {String? url}) async {
-    String finalUrl = url ?? _urlController.text.trim();
-    if (finalUrl.isEmpty) {
-      final localizations = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            localizations?.please_paste_link ?? 'Please paste a link first',
-          ),
-        ),
-      );
-      return;
-    }
-
-    await _logNavigateToWebView(finalUrl);
-    await _logDownloadClick();
-    await _showInterstitialAd();
-
-    if (mounted) {
-      if (!finalUrl.startsWith('http')) {
-        finalUrl = 'https://$finalUrl';
-      }
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => WebViewScreen(url: finalUrl)),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -702,7 +77,7 @@ class _BrowserScreenState extends State<_BrowserScreen> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            localizations?.appTitle ?? 'Video Downloader',
+            'Video Downloader'.tr,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -710,72 +85,22 @@ class _BrowserScreenState extends State<_BrowserScreen> {
             ),
           ),
         ),
-        centerTitle: true,
         elevation: 0,
         actions: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Crown.png',
-                width: 35,
-                height: 35,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.star, color: Colors.white, size: 22),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumScreen(),
-                  ),
-                );
-              },
-              tooltip: localizations?.premium ?? 'Premium',
-            ),
+          _buildIconButton(
+            'assets/images/Crown.png',
+            controller.goToPremium,
+            'premium'.tr,
           ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Facebookicon.png',
-                width: 22,
-                height: 22,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.facebook, color: Colors.white, size: 22),
-              ),
-              onPressed: () {
-                openInChrome(AppEnv.facebookBaseUrl);
-              },
-              tooltip: localizations?.facebook ?? 'Facebook',
-            ),
+          _buildIconButton(
+            'assets/images/Facebookicon.png',
+            () => controller.openInChrome('https://facebook.com'),
+            'facebook'.tr,
           ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Settingicon.png',
-                width: 30,
-                height: 30,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.settings, color: Colors.white, size: 22),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-              tooltip: localizations?.settings ?? 'Settings',
-            ),
+          _buildIconButton(
+            'assets/images/Settingicon.png',
+            controller.goToSettings,
+            'settings'.tr,
           ),
           const SizedBox(width: 8),
         ],
@@ -793,338 +118,355 @@ class _BrowserScreenState extends State<_BrowserScreen> {
           SingleChildScrollView(
             child: Column(
               children: [
-                // Banner Ad at the top
-                if (_isBannerLoaded && _bannerAd != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
-                    child: SizedBox(
-                      height: 50,
-                      child: AdWidget(ad: _bannerAd!),
-                    ),
-                  ),
-
-                const SizedBox(height: 8),
-
-                // URL Input Section
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(
-                      255,
-                      233,
-                      230,
-                      230,
-                    ).withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Text Field for URL input
-                      Container(
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 233, 230, 230),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 170, 166, 166),
+                // Banner Ad
+                Obx(
+                  () =>
+                      controller.isBannerLoaded.value &&
+                          controller.bannerAd != null
+                      ? Container(
+                          margin: const EdgeInsets.only(
+                            top: 8,
+                            left: 16,
+                            right: 16,
                           ),
-                        ),
-                        child: TextField(
-                          controller: _urlController,
-                          decoration: InputDecoration(
-                            hintText:
-                                localizations?.searchHint ??
-                                'Paste your link here...',
-                            hintStyle: TextStyle(color: Colors.grey.shade400),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            prefixIcon: Image.asset(
-                              'assets/images/coy',
-                              width: 20,
-                              height: 20,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.link,
-                                size: 20,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          // Paste Link Button
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _pasteLink,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF0066ff),
-                                side: const BorderSide(
-                                  color: Color(0xFF0066ff),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                              ),
-                              child: Text(
-                                localizations?.paste_link ?? 'Paste Link',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Fetch Video Button with interstitial ad
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF0066ff),
-                                    Color(0xFF1f83ff),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  foregroundColor: Colors.white,
-                                  shadowColor: Colors.transparent,
-                                  elevation: 0,
-                                ),
-                                onPressed: _isFetching ? null : _onFetchVideo,
-                                child: _isFetching
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : Text('Fetch Video'),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                          height: 50,
+                          child: AdWidget(ad: controller.bannerAd!),
+                        )
+                      : const SizedBox.shrink(),
                 ),
-
+                const SizedBox(height: 8),
+                _buildUrlInputSection(),
                 const SizedBox(height: 20),
-
-                // Conditional rendering - Show MREC Ad OR Video Preview
-                if (!_showVideoPreview)
-                  // Show MREC Ad when no video preview
-                  Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 336,
-                        height: 280,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade900.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade800),
-                        ),
-                        child: _isMrecLoaded && _mrecAd != null
-                            ? AdWidget(ad: _mrecAd!)
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.video_library,
-                                    size: 50,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Enter URL & tap Fetch Video',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade500,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  )
-                else
-                  // Show Video Preview after clicking Fetch Video
-                  Container(
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade900.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                          child: _buildThumbnail(localizations),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _title ??
-                                          (localizations?.video ??
-                                              'Video Preview'),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '720p • MP4',
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.7),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  if (_urlController.text.isNotEmpty) {
-                                    _navigateToWebView(context);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          localizations?.please_paste_link ??
-                                              'Please paste a link first',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
-                                icon: const Icon(Icons.download, size: 18),
-                                label: Text(
-                                  localizations?.download ?? 'Download',
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0066ff),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // Instructions Section (always visible)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        localizations?.how_to_download ?? 'How to download?',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildStep(
-                        '1',
-                        localizations?.step_1 ?? 'Open and copy video link',
-                      ),
-                      const SizedBox(height: 8),
-                      _buildStep(
-                        '2',
-                        localizations?.step_2 ??
-                            'Paste link and tap Fetch Video',
-                      ),
-                      const SizedBox(height: 8),
-                      _buildStep(
-                        '3',
-                        localizations?.step_3 ??
-                            'Tap Download to save the video',
-                      ),
-                    ],
-                  ),
+                Obx(
+                  () => controller.showVideoPreview.value
+                      ? _buildVideoPreview()
+                      : _buildMrecAd(),
                 ),
                 const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0066ff).withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.tips_and_updates,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            localizations?.tipText ??
-                                '💡 Tip: Tap "Fetch Video" to see preview before downloading',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildInstructionsSection(),
+                const SizedBox(height: 16),
+                _buildTipSection(),
                 const SizedBox(height: 20),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconButton(String asset, VoidCallback onTap, String tooltip) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: Image.asset(
+          asset,
+          width: 30,
+          height: 30,
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.star, color: Colors.white, size: 22),
+        ),
+        onPressed: onTap,
+        tooltip: tooltip,
+      ),
+    );
+  }
+
+  Widget _buildUrlInputSection() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(255, 233, 230, 230).withOpacity(0.95),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 233, 230, 230),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color.fromARGB(255, 170, 166, 166),
+              ),
+            ),
+            child: TextField(
+              controller: controller.urlController,
+              decoration: InputDecoration(
+                hintText: 'Paste your video link here'.tr,
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                prefixIcon: Image.asset(
+                  'assets/images/coy',
+                  width: 20,
+                  height: 20,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.link, size: 20, color: Colors.grey),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: controller.pasteLink,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0066ff),
+                    side: const BorderSide(color: Color(0xFF0066ff)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text('Paste Link'.tr),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Obx(
+                  () => Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0066ff), Color(0xFF1f83ff)],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        elevation: 0,
+                      ),
+                      onPressed: controller.isFetching.value
+                          ? null
+                          : controller.fetchVideo,
+                      child: controller.isFetching.value
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text('Fetch Video'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMrecAd() {
+    return Obx(
+      () => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Center(
+          child: Container(
+            width: 336,
+            height: 280,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade900.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade800),
+            ),
+            child: controller.isMrecLoaded.value && controller.mrecAd != null
+                ? AdWidget(ad: controller.mrecAd!)
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.video_library,
+                        size: 50,
+                        color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Enter URL & tap Fetch Video',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoPreview() {
+    return Obx(
+      () => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade900.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+              child: controller.isFetching.value
+                  ? SizedBox(
+                      height: 200,
+                      width: double.infinity,
+                      child: Container(
+                        color: Colors.grey.shade800,
+                        child: const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        ),
+                      ),
+                    )
+                  : SizedBox(
+                      height: 200,
+                      width: double.infinity,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          controller.thumbnailUrl != null
+                              ? Image.network(
+                                  controller.thumbnailUrl!,
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _defaultThumbnail(),
+                                )
+                              : _defaultThumbnail(),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.play_circle_filled,
+                              size: 60,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          controller.videoTitle ?? 'video'.tr,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '720p • MP4',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: controller.navigateToWebView,
+                    icon: const Icon(Icons.download, size: 18),
+                    label: Text('Download'.tr),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0066ff),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _defaultThumbnail() {
+    return SizedBox(
+      height: 200,
+      width: double.infinity,
+      child: Container(
+        color: Colors.grey.shade800,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.play_circle_filled,
+                size: 60,
+                color: Colors.white,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'video_ready'.tr,
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstructionsSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'How to Download'.tr,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 12),
+          _buildStep('1', 'Open app and copy video link'.tr),
+          const SizedBox(height: 8),
+          _buildStep(
+            '2',
+            'Paste the link in Fast Video Downloader and Fetch'.tr,
+          ),
+          const SizedBox(height: 8),
+          _buildStep('3', 'Select download quality and start download'.tr),
         ],
       ),
     );
@@ -1156,158 +498,38 @@ class _BrowserScreenState extends State<_BrowserScreen> {
     );
   }
 
-  Widget _buildThumbnail(AppLocalizations? localizations) {
-    if (_isFetching) {
-      return SizedBox(
-        height: 200,
-        width: double.infinity,
-        child: Container(
-          color: Colors.grey.shade800,
-          child: const Center(
-            child: CircularProgressIndicator(color: Colors.white),
-          ),
+  Widget _buildTipSection() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0066ff).withOpacity(0.9),
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
-    }
-
-    if (_imageUrl != null && _imageUrl!.isNotEmpty) {
-      return SizedBox(
-        height: 200,
-        width: double.infinity,
-        child: Stack(
-          alignment: Alignment.center,
+        child: Row(
           children: [
-            Image.network(
-              _imageUrl!,
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _defaultThumbnail(localizations),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.play_circle_filled,
-                size: 60,
-                color: Colors.white,
+            const Icon(Icons.tips_and_updates, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Try videos.com for more'.tr,
+                style: const TextStyle(fontSize: 12, color: Colors.white),
               ),
             ),
           ],
         ),
-      );
-    }
-
-    return _defaultThumbnail(localizations);
-  }
-
-  Widget _defaultThumbnail(AppLocalizations? localizations) {
-    return SizedBox(
-      height: 200,
-      width: double.infinity,
-      child: Container(
-        color: Colors.grey.shade800,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.play_circle_filled,
-                size: 60,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                localizations?.video_ready ??
-                    'Video ready! Tap Download to save.',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
 }
 
-// ==================== WATCH SCREEN WITH BANNER AD ====================
-
-class _WatchScreenWithAd extends StatefulWidget {
+// ==================== WATCH SCREEN ====================
+class _WatchScreenWithAd extends GetView<HomeController> {
   const _WatchScreenWithAd();
 
   @override
-  State<_WatchScreenWithAd> createState() => _WatchScreenWithAdState();
-}
-
-class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
-  BannerAd? _bannerAd;
-  bool _isAdLoaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBannerAd();
-    _logScreenView();
-  }
-
-  // Log screen view for watch tab
-  Future<void> _logScreenView() async {
-    await _analytics.logScreenView(
-      screenName: 'WatchTab',
-      screenClass: 'WatchTab',
-    );
-  }
-
-  // Log when user opens Facebook from watch tab
-  Future<void> _logOpenFacebook() async {
-    await _analytics.logEvent(
-      name: 'open_facebook_from_watch_tab',
-      parameters: {},
-    );
-  }
-
-  // Log when user views help guide
-  Future<void> _logViewHelpGuide() async {
-    await _analytics.logEvent(
-      name: 'view_help_guide',
-      parameters: {'from_screen': 'WatchTab'},
-    );
-  }
-
-  void _loadBannerAd() {
-    _bannerAd = BannerAd(
-      adUnitId: watchScreenBannerAdUnitId,
-      request: const AdRequest(),
-      size: AdSize.banner,
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          setState(() {
-            _isAdLoaded = true;
-          });
-        },
-        onAdFailedToLoad: (ad, error) {
-          print('Watch Screen BannerAd failed to load: $error');
-          ad.dispose();
-          setState(() {
-            _isAdLoaded = false;
-          });
-        },
-      ),
-    )..load();
-  }
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -1316,7 +538,7 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            localizations?.appTitle ?? 'Video Downloader',
+            'Video Downloader'.tr,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -1324,73 +546,22 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
             ),
           ),
         ),
-        centerTitle: true,
         elevation: 0,
         actions: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Crown.png',
-                width: 35,
-                height: 35,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.star, color: Colors.white, size: 22),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumScreen(),
-                  ),
-                );
-              },
-              tooltip: localizations?.premium ?? 'Premium',
-            ),
+          _buildIconButton(
+            'assets/images/Crown.png',
+            controller.goToPremium,
+            'premium'.tr,
           ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Facebookicon.png',
-                width: 22,
-                height: 22,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.facebook, color: Colors.white, size: 22),
-              ),
-              onPressed: () async {
-                await _logOpenFacebook();
-                openInChrome(AppEnv.facebookBaseUrl);
-              },
-              tooltip: localizations?.facebook ?? 'Facebook',
-            ),
+          _buildIconButton(
+            'assets/images/Facebookicon.png',
+            controller.openFacebook,
+            'facebook'.tr,
           ),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Settingicon.png',
-                width: 30,
-                height: 30,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.settings, color: Colors.white, size: 22),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-              tooltip: localizations?.settings ?? 'Settings',
-            ),
+          _buildIconButton(
+            'assets/images/Settingicon.png',
+            controller.goToSettings,
+            'settings'.tr,
           ),
           const SizedBox(width: 8),
         ],
@@ -1408,373 +579,32 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
           SingleChildScrollView(
             child: Column(
               children: [
-                // Banner Ad at the top below the app bar
-                if (_isAdLoaded && _bannerAd != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
-                    child: SizedBox(
-                      height: 50,
-                      child: AdWidget(ad: _bannerAd!),
-                    ),
-                  ),
+                Obx(
+                  () =>
+                      controller.isWatchBannerLoaded.value &&
+                          controller.watchBannerAd != null
+                      ? Container(
+                          margin: const EdgeInsets.only(
+                            top: 8,
+                            left: 16,
+                            right: 16,
+                          ),
+                          height: 50,
+                          child: AdWidget(ad: controller.watchBannerAd!),
+                        )
+                      : const SizedBox.shrink(),
+                ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      // Hero Section
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color(0xFF0066ff).withOpacity(0.9),
-                              const Color(0xFF1f83ff).withOpacity(0.9),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0066ff).withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                  ),
-                                ],
-                              ),
-                              child: Image.asset(
-                                'assets/images/Watch_Video.png',
-                                width: 60,
-                                height: 60,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.play_circle_filled,
-                                  size: 60,
-                                  color: Color(0xFF0066ff),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              localizations?.watch_videos ??
-                                  'Watch & Download Videos',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              localizations?.tap_below_to_open ??
-                                  'Browse and save your favorite videos',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  await _logOpenFacebook();
-                                  openInChrome(AppEnv.facebookBaseUrl);
-                                },
-                                label: Text(
-                                  localizations?.open_app ?? 'Open App',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF0066ff),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildHeroSection(),
                       const SizedBox(height: 20),
-                      // How to Download Videos - Beautiful Section
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [
-                                    const Color(0xFF0066ff),
-                                    const Color(0xFF1f83ff),
-                                  ],
-                                ),
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(20),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.download_for_offline,
-                                      color: Color(0xFF0066ff),
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      localizations?.how_to_download_videos ??
-                                          'How to Download Videos',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                children: [
-                                  // Step 1
-                                  _buildStepCard(
-                                    title: 'Find & Share',
-                                    description:
-                                        localizations?.step_1 ??
-                                        'Open ,find a video you like, and tap the Share button',
-                                    icon: Icons.looks_one,
-                                    color: const Color(0xFF1877F2),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  // Step 2
-                                  _buildStepCard(
-                                    title: 'Copy Link',
-                                    description:
-                                        'Select "Copy Link" from the share options',
-                                    icon: Icons.looks_two,
-                                    color: const Color(0xFF34A853),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  // Step 3
-                                  _buildStepCard(
-                                    title: 'Paste & Download',
-                                    description:
-                                        localizations?.step_2 ??
-                                        'Go to Home tab, paste the link, and tap Download',
-                                    icon: Icons.looks_3,
-                                    color: const Color(0xFF0066ff),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildHowToSection(),
                       const SizedBox(height: 20),
-                      // Pro Tips Section
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF0066ff).withOpacity(0.2),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF0066ff,
-                                    ).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.tips_and_updates,
-                                    color: Color(0xFF0066ff),
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Text(
-                                    'Pro Tips for Best Results',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTipRow(
-                              '🎯',
-                              localizations?.tip_find_video ??
-                                  'Public videos work best for downloading',
-                            ),
-                            const SizedBox(height: 12),
-                            _buildTipRow(
-                              '📱',
-                              'Make sure you have a stable internet connection',
-                            ),
-                            const SizedBox(height: 12),
-                            _buildTipRow(
-                              '💾',
-                              'Saved videos are stored in your gallery',
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildProTipsSection(),
                       const SizedBox(height: 20),
-                      // Need Help Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            _logViewHelpGuide();
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                title: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.help_outline,
-                                      color: Color(0xFF0066ff),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      localizations?.how_to_download_videos ??
-                                          'Quick Guide',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildDialogStep(
-                                      '1',
-                                      localizations?.step_1 ??
-                                          'Find a video on Facebook',
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildDialogStep(
-                                      '2',
-                                      'Tap the share button',
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildDialogStep('3', 'Select "Copy Link"'),
-                                    const SizedBox(height: 12),
-                                    _buildDialogStep(
-                                      '4',
-                                      localizations?.step_2 ??
-                                          'Go to Home tab and paste the link',
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildDialogStep(
-                                      '5',
-                                      localizations?.step_3 ??
-                                          'Tap Download button',
-                                    ),
-                                  ],
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: const Color(0xFF0066ff),
-                                    ),
-                                    child: Text(
-                                      localizations?.got_it ?? 'Got it',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.support_agent,
-                            color: Colors.transparent,
-                          ),
-                          label: Text(
-                            localizations?.need_help ??
-                                'Need Help? Watch Tutorial',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.transparent,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.transparent),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
+                      _buildHelpButton(),
                     ],
                   ),
                 ),
@@ -1786,12 +616,193 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
     );
   }
 
-  Widget _buildStepCard({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-  }) {
+  Widget _buildIconButton(String asset, VoidCallback onTap, String tooltip) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: Image.asset(
+          asset,
+          width: 30,
+          height: 30,
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.star, color: Colors.white, size: 22),
+        ),
+        onPressed: onTap,
+        tooltip: tooltip,
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0066ff).withOpacity(0.9),
+            const Color(0xFF1f83ff).withOpacity(0.9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0066ff).withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+              ],
+            ),
+            child: Image.asset(
+              'assets/images/Watch_Video.png',
+              width: 60,
+              height: 60,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.play_circle_filled,
+                size: 60,
+                color: Color(0xFF0066ff),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Watch Videos'.tr,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tap Below to Open'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: controller.openFacebook,
+              label: Text('Open App'.tr, style: const TextStyle(fontSize: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0066ff),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHowToSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0066ff), Color(0xFF1f83ff)],
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.download_for_offline,
+                    color: Color(0xFF0066ff),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'How to Download Videos'.tr,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildStepCard(
+                  'Find & Share',
+                  'Watch videos which u like'.tr,
+                  Icons.looks_one,
+                  const Color(0xFF1877F2),
+                ),
+                const SizedBox(height: 16),
+                _buildStepCard(
+                  'Copy Link',
+                  'Select "Copy Link" from the share options',
+                  Icons.looks_two,
+                  const Color(0xFF34A853),
+                ),
+                const SizedBox(height: 16),
+                _buildStepCard(
+                  'Paste & Download',
+                  'Paste the link in Fast Video Downloader Fetch and Download it'
+                      .tr,
+                  Icons.looks_3,
+                  const Color(0xFF0066ff),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1839,6 +850,54 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
     );
   }
 
+  Widget _buildProTipsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF0066ff).withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0066ff).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.tips_and_updates,
+                  color: Color(0xFF0066ff),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Pro Tips for Best Results',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildTipRow('🎯', 'Open app Choose Video which u like'.tr),
+          const SizedBox(height: 12),
+          _buildTipRow('📱', 'Make sure you have a stable internet connection'),
+          const SizedBox(height: 12),
+          _buildTipRow('💾', 'Saved videos are stored in your gallery'),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTipRow(String emoji, String text) {
     return Row(
       children: [
@@ -1854,30 +913,24 @@ class _WatchScreenWithAdState extends State<_WatchScreenWithAd> {
     );
   }
 
-  Widget _buildDialogStep(String number, String text) {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0066ff).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              number,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0066ff),
-              ),
-            ),
+  Widget _buildHelpButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: controller.showHelpGuide,
+        icon: const Icon(Icons.support_agent, color: Colors.transparent),
+        label: Text(
+          'need_help'.tr,
+          style: const TextStyle(fontSize: 14, color: Colors.transparent),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Colors.transparent),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
-      ],
+      ),
     );
   }
 }

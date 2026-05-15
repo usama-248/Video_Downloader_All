@@ -1,274 +1,172 @@
-// ignore_for_file: unused_element
-
-import 'package:facebook_video_downloader/features/languageselect/languageSelectorScreen.dart';
+// import 'package:facebook_video_downloader/features/languageselect/languageSelectorScreen.dart';
+import 'package:facebook_video_downloader/controllers/onboarding_controller.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
-class OnboardingPageData {
-  final String imagePath;
-  final String title;
-  final String description;
 
-  OnboardingPageData({
-    required this.imagePath,
-    required this.title,
-    required this.description,
-  });
-}
-
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends GetView<OnboardingController> {
   const OnboardingScreen({Key? key}) : super(key: key);
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
-}
-
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-  bool _isLastPage = false;
-
-  late List<OnboardingPageData> _onboardingData;
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize with empty data, will be updated when localization is ready
-    _onboardingData = [
-      OnboardingPageData(
-        imagePath: 'assets/images/onboarding1.png',
-        title: '',
-        description: '',
-      ),
-      OnboardingPageData(
-        imagePath: 'assets/images/onboarding2.png',
-        title: '',
-        description: '',
-      ),
-      OnboardingPageData(
-        imagePath: 'assets/images/onboarding3.png',
-        title: '',
-        description: '',
-      ),
-    ];
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Update localized strings when dependencies change
-    _updateLocalizedStrings();
-  }
-
-  void _updateLocalizedStrings() {
-    final localizations = AppLocalizations.of(context);
-    if (localizations != null) {
-      setState(() {
-        _onboardingData = [
-          OnboardingPageData(
-            imagePath: 'assets/images/onboarding1.png',
-            title: localizations.onboarding_title_1,
-            description: localizations.onboarding_desc_1,
-          ),
-          OnboardingPageData(
-            imagePath: 'assets/images/onboarding2.png',
-            title: localizations.onboarding_title_2,
-            description: localizations.onboarding_desc_2,
-          ),
-          OnboardingPageData(
-            imagePath: 'assets/images/onboarding3.png',
-            title: localizations.onboarding_title_3,
-            description: localizations.onboarding_desc_3,
-          ),
-        ];
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  void _onNextPressed() {
-    if (_isLastPage) {
-      _completeOnboarding();
-    } else {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _onPreviousPressed() {
-    if (_currentPage > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-void _completeOnboarding() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('has_seen_onboarding', true);
-  
-  // Navigate to Language screen (one-time)
-  Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => const LanguageSelectorScreen()),
-  );
-}
-
-  @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
+    // Initialize controller if not already
+    if (!Get.isRegistered<OnboardingController>()) {
+      Get.put(OnboardingController());
+    }
+    
+    // Update localized strings
+    controller.updateLocalizedStrings(context);
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             // Top row with skip button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Empty space for balance
-                  const SizedBox(width: 60),
-
-                  // Centered title
-                  Text(
-                    'Welcome',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                      letterSpacing: 1,
-                    ),
-                  ),
-
-                  // Skip button
-                  TextButton(
-                    onPressed: () => _completeOnboarding(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: Text(
-                      localizations?.skip ?? 'Skip',
-                      style: TextStyle(
-                        color: Colors.blue[600],
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
+            _buildTopBar(context),
+            
             // Page content - Centered
             Expanded(
               child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                    _isLastPage = index == _onboardingData.length - 1;
-                  });
-                },
-                itemCount: _onboardingData.length,
+                controller: controller.pageController,
+                onPageChanged: controller.onPageChanged,
+                itemCount: controller.totalPages,
                 itemBuilder: (context, index) {
-                  return _buildPage(_onboardingData[index], index);
+                  return _buildPage(controller.onboardingPages[index], index);
                 },
               ),
             ),
-
+            
             // Bottom navigation - Centered dots and button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-              child: Column(
-                children: [
-                  // Page indicator - Centered
-                  Center(
-                    child: SmoothPageIndicator(
-                      controller: _pageController,
-                      count: _onboardingData.length,
-                      effect: const ExpandingDotsEffect(
-                        activeDotColor: Color(0xFF0066ff),
-                        dotColor: Color(0xFFE0E0E0),
-                        dotHeight: 8,
-                        dotWidth: 8,
-                        expansionFactor: 3,
-                        spacing: 8,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Get Started / Next Button - Centered and prominent
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: ElevatedButton(
-                      onPressed: _onNextPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0066ff),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        elevation: 3,
-                        shadowColor: const Color(0xFF0066ff).withOpacity(0.4),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _isLastPage
-                                ? (localizations?.get_started ?? 'GET STARTED')
-                                : (localizations?.next ?? 'NEXT'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                          if (!_isLastPage) ...[
-                            const SizedBox(width: 8),
-                            const Icon(Icons.arrow_forward_rounded, size: 18),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
+            _buildBottomNavigation(context),
           ],
         ),
       ),
     );
   }
-
+  
+  Widget _buildTopBar(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Empty space for balance
+          const SizedBox(width: 60),
+          
+          // Centered title
+          Text(
+            'Welcome',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+              letterSpacing: 1,
+            ),
+          ),
+          
+          // Skip button
+          TextButton(
+            onPressed: controller.skipOnboarding,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: Text(
+              localizations?.skip ?? 'Skip',
+              style: TextStyle(
+                color: Colors.blue[600],
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildBottomNavigation(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    
+    return Obx(() => Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        children: [
+          // Page indicator - Centered
+          Center(
+            child: SmoothPageIndicator(
+              controller: controller.pageController,
+              count: controller.totalPages,
+              effect: const ExpandingDotsEffect(
+                activeDotColor: Color(0xFF0066ff),
+                dotColor: Color(0xFFE0E0E0),
+                dotHeight: 8,
+                dotWidth: 8,
+                expansionFactor: 3,
+                spacing: 8,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Get Started / Next Button - Centered and prominent
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ElevatedButton(
+              onPressed: controller.nextPage,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0066ff),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 3,
+                shadowColor: const Color(0xFF0066ff).withOpacity(0.4),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    controller.isLastPage.value
+                        ? (localizations?.get_started ?? 'GET STARTED')
+                        : (localizations?.next ?? 'NEXT'),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  if (!controller.isLastPage.value) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward_rounded, size: 18),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+        ],
+      ),
+    ));
+  }
+  
   Widget _buildPage(OnboardingPageData data, int index) {
     return SingleChildScrollView(
       child: Padding(
@@ -278,10 +176,10 @@ void _completeOnboarding() async {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-
+            
             // Image container - Centered
             Container(
-              height: MediaQuery.of(context).size.height * 0.42,
+              height: MediaQuery.of(Get.context!).size.height * 0.42,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
@@ -324,9 +222,9 @@ void _completeOnboarding() async {
                 ),
               ),
             ),
-
+            
             const SizedBox(height: 32),
-
+            
             // Title - Centered
             Text(
               data.title,
@@ -339,9 +237,9 @@ void _completeOnboarding() async {
                 letterSpacing: -0.5,
               ),
             ),
-
+            
             const SizedBox(height: 16),
-
+            
             // Description - Centered
             Text(
               data.description,
@@ -353,27 +251,27 @@ void _completeOnboarding() async {
                 letterSpacing: 0.2,
               ),
             ),
-
+            
             const SizedBox(height: 30),
-
+            
             // Animated progress cards (centered)
             Center(
               child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.85,
+                width: MediaQuery.of(Get.context!).size.width * 0.85,
                 child: _buildProgressCards(index),
               ),
             ),
-
+            
             const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
-
+  
   Widget _buildProgressCards(int pageIndex) {
-    final localizations = AppLocalizations.of(context);
-
+    final localizations = AppLocalizations.of(Get.context!);
+    
     if (pageIndex == 0) {
       return AnimatedContainer(
         duration: const Duration(milliseconds: 500),
@@ -428,18 +326,18 @@ void _completeOnboarding() async {
       );
     }
   }
-
+  
   Widget _buildProgressItem(
     String title,
     int? current,
     int? total,
     bool isCompleted,
   ) {
-    final localizations = AppLocalizations.of(context);
+    final localizations = AppLocalizations.of(Get.context!);
     double progress = (current != null && total != null)
         ? current / total
         : 1.0;
-
+    
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -537,7 +435,7 @@ void _completeOnboarding() async {
       ),
     );
   }
-
+  
   Widget _buildDownloadCard(String title, String subtitle, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),

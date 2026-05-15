@@ -1,25 +1,21 @@
 
 
-
-
-
-
-
-
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 
 class UrlInput extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSearch;
 
-  const UrlInput({Key? key, required this.controller, required this.onSearch})
-    : super(key: key);
+  const UrlInput({
+    Key? key,
+    required this.controller,
+    required this.onSearch,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-    
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -49,7 +45,7 @@ class UrlInput extends StatelessWidget {
                   child: TextField(
                     controller: controller,
                     decoration: InputDecoration(
-                      hintText: localizations?.searchHint ?? 'Paste your link here...',
+                      hintText: 'searchHint'.tr,
                       hintStyle: TextStyle(color: Colors.grey.shade400),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
@@ -85,7 +81,7 @@ class UrlInput extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: Text(localizations?.paste_link ?? 'Paste Link'),
+                child: Text('paste_link'.tr),
               ),
             ],
           ),
@@ -104,8 +100,11 @@ class UrlInput extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                localizations?.download ?? 'Download',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                'download'.tr,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

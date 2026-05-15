@@ -1,7 +1,8 @@
-import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
+
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:facebook_video_downloader/features/home/home_screen.dart';
+import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 
 /// Brand blues and neutrals aligned with the app splash screen.
 const Color _kBrandBlue = Color(0xFF0066ff);
@@ -78,37 +79,27 @@ class _InterestScreenState extends State<InterestScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              _kBrandBlue.withValues(alpha: 0.09),
-              Colors.white,
-            ],
+            colors: [_kBrandBlue.withOpacity(0.09), Colors.white],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
               const SizedBox(height: 40),
-              // Header Section
-              const Text(
-                "Let's select your interests.",
-                style: TextStyle(
+              Text(
+                'Select Interests'.tr,
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
                   color: _kTextPrimary,
-                  letterSpacing: -0.3,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Please select two or more to proceed.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _kTextSecondary,
-                  height: 1.4,
-                ),
+                'Whats your Interests?'.tr,
+                style: TextStyle(fontSize: 14, color: _kTextSecondary),
               ),
               const SizedBox(height: 32),
-              // Interests Grid
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -127,17 +118,18 @@ class _InterestScreenState extends State<InterestScreen> {
                         interest['name'],
                       );
                       final color = interest['color'] as Color;
-
                       return _buildInterestCard(
                         interest: interest,
                         isSelected: isSelected,
                         color: color,
+                        onTap: () => setState(
+                          () => _toggleInterest(interest['name'] as String),
+                        ),
                       );
                     },
                   ),
                 ),
               ),
-              // Continue Button
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -147,23 +139,18 @@ class _InterestScreenState extends State<InterestScreen> {
                       height: 52,
                       child: ElevatedButton(
                         onPressed: _selectedInterests.length >= 2
-                            ? () => _saveAndContinue()
+                            ? _saveAndContinue
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kBrandBlue,
                           disabledBackgroundColor: Colors.grey.shade300,
-                          foregroundColor: Colors.white,
-                          disabledForegroundColor: _kTextSecondary,
-                          elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         child: Text(
-                          'Continue (${_selectedInterests.length}/2+)',
+                          '${'Continue'.tr} (${_selectedInterests.length}/2+)',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
                             color: _selectedInterests.length >= 2
                                 ? Colors.white
                                 : _kTextSecondary,
@@ -171,13 +158,15 @@ class _InterestScreenState extends State<InterestScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
                     if (_selectedInterests.length < 2)
-                      Text(
-                        'Select at least 2 interests to continue',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _kTextSecondary,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Select At Least Two'.tr,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _kTextSecondary,
+                          ),
                         ),
                       ),
                   ],
@@ -194,38 +183,30 @@ class _InterestScreenState extends State<InterestScreen> {
     required Map<String, dynamic> interest,
     required bool isSelected,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: () => _toggleInterest(interest['name'] as String),
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: isSelected
               ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    _kBrandBlue,
-                    Color.lerp(_kBrandBlue, color, 0.35)!,
-                  ],
+                  colors: [_kBrandBlue, Color.lerp(_kBrandBlue, color, 0.35)!],
                 )
               : null,
           color: isSelected ? null : Colors.white,
           border: Border.all(
-            color: isSelected
-                ? _kBrandBlue.withValues(alpha: 0.85)
-                : const Color(0xFFE5E7EB),
+            color: isSelected ? _kBrandBlue : const Color(0xFFE5E7EB),
             width: isSelected ? 1.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
-                  ? _kBrandBlue.withValues(alpha: 0.22)
-                  : Colors.black.withValues(alpha: 0.04),
+                  ? _kBrandBlue.withOpacity(0.22)
+                  : Colors.black.withOpacity(0.04),
               blurRadius: isSelected ? 12 : 6,
-              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -241,11 +222,8 @@ class _InterestScreenState extends State<InterestScreen> {
             Text(
               interest['name'] as String,
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color: isSelected ? Colors.white : _kTextPrimary,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -254,26 +232,22 @@ class _InterestScreenState extends State<InterestScreen> {
   }
 
   void _toggleInterest(String interest) {
-    setState(() {
-      if (_selectedInterests.contains(interest)) {
-        _selectedInterests.remove(interest);
-      } else {
-        // Allow unlimited selection
-        _selectedInterests.add(interest);
-      }
-    });
+    if (_selectedInterests.contains(interest)) {
+      _selectedInterests.remove(interest);
+    } else {
+      _selectedInterests.add(interest);
+    }
   }
 
-  void _saveAndContinue() async {
+  Future<void> _saveAndContinue() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_selected_interests', true);
+    await prefs.setStringList(
+      'selected_interests',
+      _selectedInterests.toList(),
+    );
 
-    // After interests, go to Premium (which will then go to Home)
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const PremiumScreen()),
-      );
-    }
+    // Use GetX navigation (no context needed)
+    Get.offAll(() => const PremiumScreen());
   }
 }

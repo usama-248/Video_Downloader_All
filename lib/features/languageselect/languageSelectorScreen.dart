@@ -1,184 +1,173 @@
-
-
-import 'package:facebook_video_downloader/features/interest/interestscreen.dart';
-import 'package:facebook_video_downloader/features/providers/language_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:provider/provider.dart';
+import 'package:facebook_video_downloader/controllers/language_controller.dart';
 
-class LanguageSelectorScreen extends StatefulWidget {
-  const LanguageSelectorScreen({super.key});
-
-  @override
-  State<LanguageSelectorScreen> createState() => _LanguageSelectorScreenState();
-}
-
-class _LanguageSelectorScreenState extends State<LanguageSelectorScreen> {
-  String _selectedLanguage = 'English';
-  final List<Map<String, dynamic>> _languages = [
-    {'name': 'English', 'code': 'en', 'flag': '🇺🇸'},
-    {'name': 'اردو', 'code': 'ur', 'flag': '🇵🇰'},
-    {'name': 'العربية', 'code': 'ar', 'flag': '🇸🇦'},
-  ];
+class LanguageSelectorScreen extends StatelessWidget {
+  const LanguageSelectorScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // This is the correct way to get the controller
+    final LanguageController controller = Get.find<LanguageController>();
+    
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            // Language Icon
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.language,
-                size: 50,
-                color: Colors.blue.shade700,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Language',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                'You can choose the language and customise your application in the language you want.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  height: 1.4,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            // Language List
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _languages.length,
-                itemBuilder: (context, index) {
-                  final language = _languages[index];
-                  final isSelected = _selectedLanguage == language['name'];
-                  return _buildLanguageOption(language, isSelected);
-                },
-              ),
-            ),
-            // Continue Button
-            Padding(
-              padding: const EdgeInsets.all(24),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Get.back(),
+        ),
+        title: Text(
+          'selectLanguage'.tr,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Obx(() => Column(
+        children: [
+          const SizedBox(height: 20),
+          
+          // English Option
+          _buildLanguageOption(
+            icon: Icons.g_translate,
+            iconColor: Colors.blue,
+            languageName: 'English',
+            languageCode: 'en',
+            isSelected: controller.currentLocale.value.languageCode == 'en',
+            onTap: () => controller.changeLanguage('en'),
+          ),
+          _buildDivider(),
+          
+          // Urdu Option
+          _buildLanguageOption(
+            icon: Icons.g_translate,
+            iconColor: Colors.green,
+            languageName: 'اردو',
+            languageCode: 'ur',
+            isSelected: controller.currentLocale.value.languageCode == 'ur',
+            onTap: () => controller.changeLanguage('ur'),
+          ),
+          _buildDivider(),
+          
+          // Arabic Option
+          _buildLanguageOption(
+            icon: Icons.g_translate,
+            iconColor: Colors.red,
+            languageName: 'العربية',
+            languageCode: 'ar',
+            isSelected: controller.currentLocale.value.languageCode == 'ar',
+            onTap: () => controller.changeLanguage('ar'),
+          ),
+          _buildDivider(),
+          
+          const SizedBox(height: 30),
+          
+          // Continue Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
               child: ElevatedButton(
-                onPressed: () => _saveAndContinue(context),
+                onPressed: () => _saveAndContinue(controller),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade700,
-                  minimumSize: const Size(double.infinity, 52),
+                  backgroundColor: const Color(0xFF0066ff),
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
+                child: Text(
+                  'continue'.tr,
+                  style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+          
+          const SizedBox(height: 20),
+        ],
+      )),
     );
   }
 
-  Widget _buildLanguageOption(Map<String, dynamic> language, bool isSelected) {
-    return GestureDetector(
-      onTap: () => setState(() => _selectedLanguage = language['name']),
+  Widget _buildLanguageOption({
+    required IconData icon,
+    required Color iconColor,
+    required String languageName,
+    required String languageCode,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.shade50 : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.blue.shade700 : Colors.grey.shade200,
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 50,
+              height: 50,
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: iconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(
-                child: Text(
-                  language['flag'],
-                  style: const TextStyle(fontSize: 26),
-                ),
-              ),
+              child: Icon(icon, color: iconColor, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-                language['name'],
+                languageName,
                 style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? Colors.blue.shade700 : Colors.black87,
+                  fontSize: 16,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.blue : Colors.black87,
                 ),
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, color: Colors.blue.shade700, size: 24),
+              const Icon(Icons.check_circle, color: Colors.blue, size: 24),
+            if (!isSelected)
+              const Icon(
+                Icons.radio_button_unchecked,
+                color: Colors.grey,
+                size: 24,
+              ),
           ],
         ),
       ),
     );
   }
 
-  void _saveAndContinue(BuildContext context) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('has_selected_language', true);
-  await prefs.setString('selected_language_name', _selectedLanguage);
-
-  // Find language code
-  final selectedLang = _languages.firstWhere(
-    (l) => l['name'] == _selectedLanguage,
-  );
-
-  // Update language provider
-  final languageProvider = Provider.of<LanguageProvider>(
-    context,
-    listen: false,
-  );
-  languageProvider.setLanguage(Locale(selectedLang['code']));
-
-  if (mounted) {
-    // Go to Interest screen (one-time)
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const InterestScreen()),
-    );
+  Widget _buildDivider() {
+    return const Divider(height: 0, thickness: 0.5, color: Colors.grey);
   }
+
+  Future<void> _saveAndContinue(LanguageController controller) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_selected_language', true);
+    
+    Get.snackbar(
+      'success'.tr,
+      '${controller.getCurrentLanguageName()} ${'languageSelected'.tr}',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 2),
+    );
+    
+    await Future.delayed(const Duration(milliseconds: 500));
+    Get.offAllNamed('/interest');
   }
 }

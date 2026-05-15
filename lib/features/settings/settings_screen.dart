@@ -1,11 +1,13 @@
+
+
 // ignore_for_file: unused_element
 
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
-import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,8 +16,6 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -23,7 +23,7 @@ class SettingsScreen extends StatelessWidget {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            l10n?.settings ?? 'Settings',
+            'Settings'.tr,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -35,7 +35,7 @@ class SettingsScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Get.back(),
         ),
       ),
       body: Container(
@@ -51,135 +51,113 @@ class SettingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top Features Section
-              _buildSectionHeader(l10n?.topFeatures ?? 'Top Features'),
+              _buildSectionHeader('Top Features'.tr),
               _buildFeatureTile(
                 icon: Icons.download,
                 iconColor: Colors.blue,
-                title: l10n?.downloadVideo ?? 'Download Video',
-                subtitle:
-                    l10n?.downloadSubtitle ?? 'Download your favourite files',
+                title: 'Download Video'.tr,
+                subtitle: 'Use the browser to download videos'.tr,
                 onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${l10n?.downloadVideo ?? 'Download Video'} - Use the browser to download videos',
-                      ),
-                    ),
+                  Get.back();
+                  Get.snackbar(
+                    'Download Video'.tr,
+                    'Use the browser to download videos',
+                    snackPosition: SnackPosition.BOTTOM,
                   );
                 },
               ),
               _buildFeatureTile(
                 icon: Icons.facebook,
                 iconColor: const Color(0xFF0066ff),
-                title: l10n?.watchVideo ?? 'Watch Video',
-                subtitle:
-                    l10n?.watchSubtitle ?? 'Watch videos directly on Facebook',
-                onTap: () => _launchFacebook(context),
+                title: 'Watch Video'.tr,
+                subtitle: 'Watch Videos'.tr,
+                onTap: () => _launchFacebook(),
               ),
               _buildFeatureTile(
                 icon: Icons.folder_open,
                 iconColor: Colors.green,
-                title: l10n?.savedVideos ?? 'Saved videos',
-                subtitle: l10n?.savedSubtitle ?? 'Open Downloaded Videos',
+                title: 'Saved Videos'.tr,
+                subtitle: 'Open Downloaded Videos'.tr,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => HistoryScreen(
-                        showBottomNav: true,
-                        onBackToHome: () {
-                          // This will pop both HistoryScreen and SettingsScreen
-                          Navigator.pop(context); // Pop HistoryScreen
-                          Navigator.pop(context); // Pop SettingsScreen
-                        },
-                      ),
+                  Get.to(
+                    () => HistoryScreen(
+                      showBottomNav: true,
+                      onBackToHome: () {
+                        Get.back(); // Pop HistoryScreen
+                        Get.back(); // Pop SettingsScreen
+                      },
                     ),
                   );
                 },
               ),
               _buildFeatureTileWithImage(
                 imagePath: 'assets/images/Language.png',
-                title: l10n?.languages ?? 'Languages',
-                subtitle: l10n?.languagesSubtitle ?? 'Change your languages',
+                title: 'Languages'.tr,
+                subtitle: 'Choose your Language'.tr,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LanguageScreen()),
-                  );
+                  Get.to(() => const LanguageSelectorScreen());
                 },
               ),
 
               const SizedBox(height: 16),
 
               // Communications Section
-              _buildSectionHeader(l10n?.communications ?? 'Communications'),
+              _buildSectionHeader('Communications'.tr),
 
               _buildFeatureTile(
                 icon: Icons.subscriptions,
                 iconColor: Colors.deepPurple,
-                title: l10n?.manageSubscription ?? 'Manage Subscription',
-                subtitle:
-                    l10n?.subscriptionSubtitle ?? 'Manage your Subscription',
+                title: 'Manage Subscription'.tr,
+                subtitle: 'Choose your Plan'.tr,
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PremiumScreen()),
-                  );
+                  Get.to(() => const PremiumScreen());
                 },
               ),
               _buildFeatureTile(
                 icon: Icons.star_rate_rounded,
                 iconColor: Colors.amber,
-                title: l10n?.giveUsReview ?? 'Give Us Review',
-                subtitle:
-                    l10n?.supportUsWithReview ??
-                    'Support us with your valuable review',
-                onTap: () => _launchReview(context),
+                title: 'Give Us Review'.tr,
+                subtitle: 'Support Us With Review'.tr,
+                onTap: () => _launchReview(),
               ),
               _buildFeatureTile(
                 icon: Icons.share,
                 iconColor: Colors.orange,
-                title: l10n?.shareApp ?? 'Share App',
-                subtitle:
-                    l10n?.shareSubtitle ?? 'Share Video Downloader with others',
+                title: 'Share App'.tr,
+                subtitle: 'Share the App with Your Friends'.tr,
                 onTap: () => _shareApp(),
               ),
               _buildFeatureTile(
                 icon: Icons.apps_rounded,
                 iconColor: Colors.purple,
-                title: l10n?.moreApps ?? 'More Apps',
-                subtitle:
-                    l10n?.discoverOurApps ?? 'Discover our other applications',
-                onTap: () => _launchMoreApps(context),
+                title: 'More Apps'.tr,
+                subtitle: 'Discover Our Apps'.tr,
+                onTap: () => _launchMoreApps(),
               ),
 
               _buildFeatureTile(
                 icon: Icons.description_outlined,
                 iconColor: Colors.indigo,
-                title: l10n?.termsOfUse ?? 'Terms of Use',
-                subtitle:
-                    l10n?.readTermsConditions ?? 'Read our Terms & Conditions',
-                onTap: () => _launchTermsOfUse(context),
+                title: 'Terms of Use'.tr,
+                subtitle: 'Read Terms and Conditions'.tr,
+                onTap: () => _launchTermsOfUse(),
               ),
 
               _buildFeatureTile(
                 icon: Icons.privacy_tip,
                 iconColor: Colors.teal,
-                title: l10n?.privacyPolicy ?? 'Privacy Policy',
-                subtitle: l10n?.privacySubtitle ?? 'Open app privacy policy',
-                onTap: () => _launchPrivacyPolicy(context),
+                title: 'Privacy Policy'.tr,
+                subtitle: 'Read Our Privacy Policy'.tr,
+                onTap: () => _launchPrivacyPolicy(),
               ),
 
               _buildFeatureTile(
                 backgroundColor: Colors.white.withOpacity(0.95),
                 icon: Icons.copyright,
                 iconColor: Colors.grey,
-                title: l10n?.disclaimer ?? 'Disclaimer',
-                subtitle:
-                    l10n?.disclaimerSubtitle ??
-                    'Contents are protected by copyright',
-                onTap: () => _showDisclaimerDialog(context, l10n),
+                title: 'Disclaimer'.tr,
+                subtitle: 'Disclaimer App'.tr,
+                onTap: () => _showDisclaimerDialog(),
               ),
 
               const SizedBox(height: 30),
@@ -302,66 +280,38 @@ class SettingsScreen extends StatelessWidget {
 
   // ====================== LAUNCH METHODS ======================
 
-  void _launchURL(BuildContext context, String url, String errorMsg) async {
+  Future<void> _launchURL(String url, String errorMsg) async {
     try {
-      final uri = Uri.parse(url);
+      final Uri uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
         throw 'Could not launch URL';
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMsg)));
+      Get.snackbar('Error', errorMsg, snackPosition: SnackPosition.BOTTOM);
     }
   }
 
-  void _launchReview(BuildContext context) {
-    _launchURL(
-      context,
-      AppEnv.rateUsUrl,
-      'Could not open Play Store for review',
-    );
+  void _launchReview() {
+    _launchURL(AppEnv.rateUsUrl, 'Could not open Play Store for review');
   }
 
-  void _launchMoreApps(BuildContext context) {
-    _launchURL(context, AppEnv.moreAppsUrl, 'Could not open More Apps');
+  void _launchMoreApps() {
+    _launchURL(AppEnv.moreAppsUrl, 'Could not open More Apps');
   }
 
-  void _launchTermsOfUse(BuildContext context) {
-    _launchURL(context, AppEnv.termsOfUseUrl, 'Could not open Terms of Use');
+  void _launchTermsOfUse() {
+    _launchURL(AppEnv.termsOfUseUrl, 'Could not open Terms of Use');
   }
 
-  void _launchPrivacyPolicy(BuildContext context) {
-    _launchURL(
-      context,
-      AppEnv.privacyPolicyUrl,
-      'Could not open Privacy Policy',
-    );
+  void _launchPrivacyPolicy() {
+    _launchURL(AppEnv.privacyPolicyUrl, 'Could not open Privacy Policy');
   }
 
-  void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Error'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _launchFacebook(BuildContext context) {
-    const url = 'https://www.facebook.com';
-    _launchURL(context, url, 'Could not open Facebook');
+  void _launchFacebook() {
+    const String url = 'https://www.facebook.com';
+    _launchURL(url, 'Could not open Facebook');
   }
 
   // ====================== SHARE FUNCTIONALITY ======================
@@ -370,62 +320,51 @@ class SettingsScreen extends StatelessWidget {
     Share.share(AppEnv.shareAppUrl);
   }
 
-  void _showDisclaimerDialog(BuildContext context, AppLocalizations? l10n) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+  void _showDisclaimerDialog() {
+    Get.dialog(
+      AlertDialog(
         backgroundColor: Colors.white,
         title: Text(
-          l10n?.disclaimerTitle ?? 'Disclaimer',
+          'Disclaimer'.tr,
           style: const TextStyle(color: Colors.black),
         ),
         content: SingleChildScrollView(
           child: Text(
-            l10n?.disclaimerContent ?? 'Contents are protected by copyright...',
+            'Please get the permissions from the owner before reposting videos.\n Any unauthorized actions (re-uploading or downloading of contents) and/or violations of intellectual property\n rights is the sole responsibility of the user'
+                .tr,
             style: const TextStyle(color: Colors.black),
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n?.ok ?? 'OK',
-              style: const TextStyle(color: Colors.black),
-            ),
+            onPressed: () => Get.back(),
+            child: Text('ok'.tr, style: const TextStyle(color: Colors.black)),
           ),
         ],
       ),
     );
   }
 
-  void _showAboutDialog(BuildContext context, AppLocalizations? l10n) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n?.aboutApp ?? 'About App'),
+  void _showAboutDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: Text('aboutApp'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.video_library, size: 60, color: Color(0xFF0066ff)),
             const SizedBox(height: 10),
             Text(
-              l10n?.appTitle ?? 'Facebook Video Downloader',
+              'appTitle'.tr,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Text('${l10n?.version ?? 'Version'} 1.0.0'),
+            Text('${'version'.tr} 1.0.0'),
             const SizedBox(height: 15),
-            Text(
-              l10n?.appDescription ??
-                  'Download and save videos from Facebook easily.',
-              textAlign: TextAlign.center,
-            ),
+            Text('appDescription'.tr, textAlign: TextAlign.center),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n?.close ?? 'Close'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: Text('close'.tr)),
         ],
       ),
     );

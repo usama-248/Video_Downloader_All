@@ -1,17 +1,12 @@
-import 'package:facebook_video_downloader/features/onboarding/screens/onboarding_screen.dart';
-import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
+
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-
-// Add your REAL App Open Ad unit ID here
-const String appOpenAdUnitId =
-    'ca-app-pub-3605518487927639/7526774448'; // REAL App Open Ad unit ID
+import 'package:get/get.dart';
+import 'package:facebook_video_downloader/controllers/splash_controller.dart';
 
 class SplashScreen extends StatefulWidget {
-  final bool isReturningUser;
-
-  const SplashScreen({super.key, this.isReturningUser = false});
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -22,16 +17,16 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  AppOpenAd? _appOpenAd;
-  bool _isAdLoaded = false;
-  bool _adShown = false;
-  bool _navigated = false;
+  late SplashController controller;
 
   @override
   void initState() {
     super.initState();
+    controller = Get.put(SplashController());
+    _setupAnimations();
+  }
 
+  void _setupAnimations() {
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -50,108 +45,11 @@ class _SplashScreenState extends State<SplashScreen>
         );
 
     _animationController.forward();
-
-    // Load App Open Ad
-    _loadAppOpenAd();
-  }
-
-  void _loadAppOpenAd() {
-    AppOpenAd.load(
-      adUnitId: appOpenAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: AppOpenAdLoadCallback(
-        onAdLoaded: (ad) {
-          _appOpenAd = ad;
-          _isAdLoaded = true;
-          print('App Open Ad loaded successfully');
-
-          // Set full screen content callback
-          _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
-            onAdShowedFullScreenContent: (ad) {
-              print('App Open Ad showed');
-            },
-            onAdDismissedFullScreenContent: (ad) {
-              print('App Open Ad dismissed');
-              ad.dispose();
-              _isAdLoaded = false;
-              _appOpenAd = null;
-              // Navigate after ad is dismissed
-              _navigateToNextScreen();
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              print('App Open Ad failed to show: $error');
-              ad.dispose();
-              _isAdLoaded = false;
-              _appOpenAd = null;
-              // Navigate even if ad fails
-              _navigateToNextScreen();
-            },
-          );
-
-          // Auto-show the ad once loaded
-          _showAppOpenAd();
-        },
-        onAdFailedToLoad: (error) {
-          print('App Open Ad failed to load: $error');
-          _isAdLoaded = false;
-          // Navigate without ad after splash delay
-          Future.delayed(const Duration(milliseconds: 2500), () {
-            _navigateToNextScreen();
-          });
-        },
-      ),
-    );
-  }
-
-  void _showAppOpenAd() {
-    if (_adShown || _navigated) return;
-
-    if (_isAdLoaded && _appOpenAd != null) {
-      _adShown = true;
-      _appOpenAd!.show();
-    }
-  }
-
-  void _navigateToNextScreen() {
-    if (_navigated) return;
-    _navigated = true;
-
-    // Small delay to ensure smooth transition
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (!mounted) return;
-
-      if (widget.isReturningUser) {
-        // RETURNING USER: Go directly to Premium Screen
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const PremiumScreen(),
-            transitionDuration: const Duration(milliseconds: 400),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
-      } else {
-        // NEW USER: Go to Onboarding Screen
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const OnboardingScreen(),
-            transitionDuration: const Duration(milliseconds: 400),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
-      }
-    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _appOpenAd?.dispose();
     super.dispose();
   }
 
