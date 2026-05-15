@@ -2467,6 +2467,8 @@ class WebViewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.put(WebViewControllerr(url: url), tag: url);
 
+    print("WEBVIEW SCREEN REBUILD...");
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF0066ff),
