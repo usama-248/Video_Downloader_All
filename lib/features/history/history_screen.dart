@@ -11,9 +11,7 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
-
-const String historyScreenBannerAdUnitId =
-    'ca-app-pub-3605518487927639/8115755781';
+import 'package:facebook_video_downloader/core/config/admob_config.dart';
 
 class HistoryScreen extends StatefulWidget {
   final bool showBottomNav;
@@ -47,7 +45,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _loadBannerAd() {
     _bannerAd = BannerAd(
-      adUnitId: historyScreenBannerAdUnitId,
+      adUnitId: AdMobConfig.bannerAdUnitId,
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(

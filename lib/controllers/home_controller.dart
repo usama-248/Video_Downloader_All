@@ -8,14 +8,8 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 
+import '../core/config/admob_config.dart';
 import '../core/config/app_env.dart';
-
-// Ad Unit IDs
-const String bannerAdUnitId = 'ca-app-pub-3605518487927639/8115755781';
-const String mrecAdUnitId = 'ca-app-pub-3605518487927639/6802674114';
-const String watchScreenBannerAdUnitId =
-    'ca-app-pub-3605518487927639/8115755781';
-const String interstitialAdUnitId = 'ca-app-pub-3605518487927639/3124495001';
 
 // Firebase Analytics
 final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
@@ -420,7 +414,7 @@ class HomeController extends GetxController {
 
   void _loadBrowserBannerAd() {
     _bannerAd = BannerAd(
-      adUnitId: bannerAdUnitId,
+      adUnitId: AdMobConfig.bannerAdUnitId,
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(
@@ -438,7 +432,7 @@ class HomeController extends GetxController {
 
   void _loadMrecAd() {
     _mrecAd = BannerAd(
-      adUnitId: mrecAdUnitId,
+      adUnitId: AdMobConfig.mrecAdUnitId,
       request: const AdRequest(),
       size: AdSize.mediumRectangle,
       listener: BannerAdListener(
@@ -456,7 +450,7 @@ class HomeController extends GetxController {
 
   void _loadInterstitialAd() {
     InterstitialAd.load(
-      adUnitId: interstitialAdUnitId,
+      adUnitId: AdMobConfig.interstitialAdUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
@@ -500,7 +494,7 @@ class HomeController extends GetxController {
 
   void _loadWatchBannerAd() {
     _watchBannerAd = BannerAd(
-      adUnitId: watchScreenBannerAdUnitId,
+      adUnitId: AdMobConfig.bannerAdUnitId,
       request: const AdRequest(),
       size: AdSize.banner,
       listener: BannerAdListener(

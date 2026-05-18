@@ -18,10 +18,7 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/controllers/download_controller.dart';
-
-const String rewardedAdUnitId = 'ca-app-pub-3605518487927639/1811413333';
-const String interstitialAdUnitIdForDownload =
-    'ca-app-pub-3605518487927639/3124495001';
+import 'package:facebook_video_downloader/core/config/admob_config.dart';
 
 class WebViewControllerr extends GetxController {
   var detectedVideoUrl = Rx<String?>(null);
@@ -313,7 +310,7 @@ class WebViewControllerr extends GetxController {
 
   void _loadRewardedAd() {
     RewardedAd.load(
-      adUnitId: rewardedAdUnitId,
+      adUnitId: AdMobConfig.rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
@@ -344,7 +341,7 @@ class WebViewControllerr extends GetxController {
 
   void _loadInterstitialAdForDownload() {
     InterstitialAd.load(
-      adUnitId: interstitialAdUnitIdForDownload,
+      adUnitId: AdMobConfig.interstitialAdUnitId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {

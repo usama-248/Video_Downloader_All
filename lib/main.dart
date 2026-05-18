@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'package:facebook_video_downloader/core/config/admob_config.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:get/get.dart';
 
@@ -42,6 +43,7 @@ Future<void> main() async {
   /// 3. Mobile Ads init
   try {
     await MobileAds.instance.initialize();
+    await AdMobConfig.configure();
     debugPrint('✅ Mobile Ads initialized successfully');
   } catch (e) {
     debugPrint('❌ Mobile Ads initialization error: $e');

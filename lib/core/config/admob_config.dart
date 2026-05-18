@@ -1,72 +1,78 @@
 import 'dart:io';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+import 'package:flutter/foundation.dart';
+
+import 'app_env.dart';
 
 class AdMobConfig {
-  // App Open Ad (for app launch/resume)
-  static String get appOpenAdUnitId {
-    if (Platform.isAndroid) {
-      return 'ca-app-pub-3605518487927639/7526774448';
-    } else if (Platform.isIOS) {
-      return 'ca-app-pub-3605518487927639/7526774448'; // Replace with your iOS ID
-    } else {
-      throw UnsupportedError('Unsupported platform');
-    }
-  }
+  static bool get isTestMode => AppEnv.admobTestMode;
 
-  // Banner Ad
-  static String get bannerAdUnitId {
-    if (Platform.isAndroid) {
-      return 'ca-app-pub-3605518487927639/8115755781';
-    } else if (Platform.isIOS) {
-      return 'ca-app-pub-3605518487927639/8115755781'; // Replace with your iOS ID
-    } else {
-      throw UnsupportedError('Unsupported platform');
-    }
-  }
+  /// Google sample ad units (Android).
+  static const _androidTestAppOpen = 'ca-app-pub-3940256099942544/3419835294';
+  static const _androidTestBanner = 'ca-app-pub-3940256099942544/6300978111';
+  static const _androidTestInterstitial =
+      'ca-app-pub-3940256099942544/1033173712';
+  static const _androidTestRewarded = 'ca-app-pub-3940256099942544/5224354917';
+  static const _androidTestMrec = 'ca-app-pub-3940256099942544/6300978111';
 
-  // Interstitial Ad
-  static String get interstitialAdUnitId {
-    if (Platform.isAndroid) {
-      return 'ca-app-pub-3605518487927639/3124495001';
-    } else if (Platform.isIOS) {
-      return 'ca-app-pub-3605518487927639/3124495001'; // Replace with your iOS ID
-    } else {
-      throw UnsupportedError('Unsupported platform');
-    }
-  }
+  /// Google sample ad units (iOS).
+  static const _iosTestAppOpen = 'ca-app-pub-3940256099942544/5575463023';
+  static const _iosTestBanner = 'ca-app-pub-3940256099942544/2934735716';
+  static const _iosTestInterstitial = 'ca-app-pub-3940256099942544/4411468910';
+  static const _iosTestRewarded = 'ca-app-pub-3940256099942544/1712485313';
+  static const _iosTestMrec = 'ca-app-pub-3940256099942544/2934735716';
 
-  // Rewarded Ad
-  static String get rewardedAdUnitId {
-    if (Platform.isAndroid) {
-      return 'ca-app-pub-3605518487927639/1811413333';
-    } else if (Platform.isIOS) {
-      return 'ca-app-pub-3605518487927639/1811413333'; // Replace with your iOS ID
-    } else {
-      throw UnsupportedError('Unsupported platform');
-    }
-  }
-
-  // MREC Ad (Medium Rectangle)
-  static String get mrecAdUnitId {
-    if (Platform.isAndroid) {
-      return 'ca-app-pub-3605518487927639/6802674114';
-    } else if (Platform.isIOS) {
-      return 'ca-app-pub-3605518487927639/6802674114'; // Replace with your iOS ID
-    } else {
-      throw UnsupportedError('Unsupported platform');
-    }
-  }
-
-  // Test mode configuration
-  static bool get isTestMode => false; // Set to true during development
-
-  // Request configuration for test devices
-  static Future<void> setupTestMode() async {
+  static String _resolve({
+    required String androidProd,
+    required String iosProd,
+    required String androidTest,
+    required String iosTest,
+  }) {
     if (isTestMode) {
-      // Add your test device ID here (find it from console logs)
-      await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(testDeviceIds: ['YOUR_TEST_DEVICE_ID']),
-      );
+      return Platform.isIOS ? iosTest : androidTest;
     }
+    if (Platform.isAndroid) return androidProd;
+    if (Platform.isIOS) return iosProd;
+    throw UnsupportedError('Unsupported platform');
+  }
+
+  static String get appOpenAdUnitId => _resolve(
+    androidProd: AppEnv.admobAndroidAppOpenId,
+    iosProd: AppEnv.admobIosAppOpenId,
+    androidTest: _androidTestAppOpen,
+    iosTest: _iosTestAppOpen,
+  );
+
+  static String get bannerAdUnitId => _resolve(
+    androidProd: AppEnv.admobAndroidBannerId,
+    iosProd: AppEnv.admobIosBannerId,
+    androidTest: _androidTestBanner,
+    iosTest: _iosTestBanner,
+  );
+
+  static String get interstitialAdUnitId => _resolve(
+    androidProd: AppEnv.admobAndroidInterstitialId,
+    iosProd: AppEnv.admobIosInterstitialId,
+    androidTest: _androidTestInterstitial,
+    iosTest: _iosTestInterstitial,
+  );
+
+  static String get rewardedAdUnitId => _resolve(
+    androidProd: AppEnv.admobAndroidRewardedId,
+    iosProd: AppEnv.admobIosRewardedId,
+    androidTest: _androidTestRewarded,
+    iosTest: _iosTestRewarded,
+  );
+
+  static String get mrecAdUnitId => _resolve(
+    androidProd: AppEnv.admobAndroidMrecId,
+    iosProd: AppEnv.admobIosMrecId,
+    androidTest: _androidTestMrec,
+    iosTest: _iosTestMrec,
+  );
+
+  static Future<void> configure() async {
+    if (!isTestMode) return;
+    debugPrint('AdMob test mode ON — using Google sample ad unit IDs');
   }
 }

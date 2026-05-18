@@ -4,8 +4,7 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-const String appOpenAdUnitId = 'ca-app-pub-3605518487927639/7526774448';
+import 'package:facebook_video_downloader/core/config/admob_config.dart';
 
 class SplashController extends GetxController {
   var isAdLoaded = false.obs;
@@ -30,7 +29,7 @@ class SplashController extends GetxController {
   
   void loadAppOpenAd() {
     AppOpenAd.load(
-      adUnitId: appOpenAdUnitId,
+      adUnitId: AdMobConfig.appOpenAdUnitId,
       request: const AdRequest(),
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
