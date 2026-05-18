@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:facebook_video_downloader/features/onboarding/screens/onboarding_screen.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/languageselect/languageSelectorScreen.dart';
 import 'package:facebook_video_downloader/features/interest/interestscreen.dart';
@@ -34,7 +35,11 @@ class OnboardingDirector {
     
     if (currentScreen is InterestScreen && !hasSelectedInterests) {
       await prefs.setBool(KEY_INTERESTS, true);
-      return const PremiumScreen();
+      if (AppFeatures.showPremiumScreen) {
+        return const PremiumScreen();
+      }
+      await prefs.setBool(KEY_PREMIUM, true);
+      return const HomeScreen();
     }
     
     if (currentScreen is PremiumScreen) {

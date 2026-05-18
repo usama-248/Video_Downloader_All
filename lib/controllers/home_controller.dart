@@ -10,6 +10,7 @@ import 'dart:async';
 
 import '../core/config/admob_config.dart';
 import '../core/config/app_env.dart';
+import '../core/config/app_features.dart';
 
 // Firebase Analytics
 final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
@@ -636,7 +637,7 @@ class HomeController extends GetxController {
   }
 
   void goToPremium() {
-    if (_isClosed) return;
+    if (_isClosed || !AppFeatures.showPremiumScreen) return;
     Get.toNamed('/premium');
   }
 

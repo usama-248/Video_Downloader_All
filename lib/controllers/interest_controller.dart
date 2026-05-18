@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 
 class InterestController extends GetxController {
   var selectedInterests = <String>{}.obs;
@@ -46,6 +47,11 @@ class InterestController extends GetxController {
     await prefs.setBool('has_selected_interests', true);
     await prefs.setStringList('selected_interests', selectedInterests.toList());
     
-    Get.offAllNamed('/premium');
+    if (AppFeatures.showPremiumScreen) {
+      Get.offAllNamed('/premium');
+    } else {
+      await prefs.setBool('has_seen_premium', true);
+      Get.offAllNamed('/home');
+    }
   }
 }

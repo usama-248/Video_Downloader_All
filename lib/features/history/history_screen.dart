@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/controllers/download_controller.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
 import 'package:flutter/material.dart';
@@ -208,29 +209,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
         centerTitle: true,
         elevation: 0,
         actions: [
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: Image.asset(
-                'assets/images/Crown.png',
-                width: 35,
-                height: 35,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.star, color: Colors.white, size: 22),
+          if (AppFeatures.showPremiumScreen)
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                icon: Image.asset(
+                  'assets/images/Crown.png',
+                  width: 35,
+                  height: 35,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.star, color: Colors.white, size: 22),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PremiumScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Premium',
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumScreen(),
-                  ),
-                );
-              },
-              tooltip: 'Premium',
             ),
-          ),
           SizedBox(
             width: 40,
             height: 40,

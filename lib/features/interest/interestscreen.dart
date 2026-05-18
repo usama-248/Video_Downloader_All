@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 
 /// Brand blues and neutrals aligned with the app splash screen.
 const Color _kBrandBlue = Color(0xFF0066ff);
@@ -247,7 +247,11 @@ class _InterestScreenState extends State<InterestScreen> {
       _selectedInterests.toList(),
     );
 
-    // Use GetX navigation (no context needed)
-    Get.offAll(() => const PremiumScreen());
+    if (AppFeatures.showPremiumScreen) {
+      Get.offAllNamed('/premium');
+    } else {
+      await prefs.setBool('has_seen_premium', true);
+      Get.offAllNamed('/home');
+    }
   }
 }

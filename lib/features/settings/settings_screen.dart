@@ -3,6 +3,7 @@
 // ignore_for_file: unused_element
 
 import 'package:facebook_video_downloader/core/config/app_env.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
@@ -104,15 +105,16 @@ class SettingsScreen extends StatelessWidget {
               // Communications Section
               _buildSectionHeader('Communications'.tr),
 
-              _buildFeatureTile(
-                icon: Icons.subscriptions,
-                iconColor: Colors.deepPurple,
-                title: 'Manage Subscription'.tr,
-                subtitle: 'Choose your Plan'.tr,
-                onTap: () {
-                  Get.to(() => const PremiumScreen());
-                },
-              ),
+              if (AppFeatures.showPremiumScreen)
+                _buildFeatureTile(
+                  icon: Icons.subscriptions,
+                  iconColor: Colors.deepPurple,
+                  title: 'Manage Subscription'.tr,
+                  subtitle: 'Choose your Plan'.tr,
+                  onTap: () {
+                    Get.to(() => const PremiumScreen());
+                  },
+                ),
               _buildFeatureTile(
                 icon: Icons.star_rate_rounded,
                 iconColor: Colors.amber,

@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/controllers/home_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -87,11 +88,12 @@ class _BrowserScreen extends GetView<HomeController> {
         ),
         elevation: 0,
         actions: [
-          _buildIconButton(
-            'assets/images/Crown.png',
-            controller.goToPremium,
-            'premium'.tr,
-          ),
+          if (AppFeatures.showPremiumScreen)
+            _buildIconButton(
+              'assets/images/Crown.png',
+              controller.goToPremium,
+              'premium'.tr,
+            ),
           _buildIconButton(
             'assets/images/Facebookicon.png',
             () => controller.openInChrome('https://facebook.com'),
@@ -548,11 +550,12 @@ class _WatchScreenWithAd extends GetView<HomeController> {
         ),
         elevation: 0,
         actions: [
-          _buildIconButton(
-            'assets/images/Crown.png',
-            controller.goToPremium,
-            'premium'.tr,
-          ),
+          if (AppFeatures.showPremiumScreen)
+            _buildIconButton(
+              'assets/images/Crown.png',
+              controller.goToPremium,
+              'premium'.tr,
+            ),
           _buildIconButton(
             'assets/images/Facebookicon.png',
             controller.openFacebook,

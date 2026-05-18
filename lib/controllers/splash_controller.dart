@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:facebook_video_downloader/core/config/admob_config.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 
 class SplashController extends GetxController {
   var isAdLoaded = false.obs;
@@ -98,8 +99,12 @@ class SplashController extends GetxController {
       // NEW USER FLOW: Go to Onboarding
       Get.offAllNamed('/onboarding');
     } else {
-      // RETURNING USER FLOW: Go to Premium Screen
-      Get.offAllNamed('/premium');
+      if (AppFeatures.showPremiumScreen) {
+        Get.offAllNamed('/premium');
+      } else {
+        await prefs.setBool('has_seen_premium', true);
+        Get.offAllNamed('/home');
+      }
     }
   }
   

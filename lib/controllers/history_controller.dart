@@ -1,5 +1,6 @@
 // import 'package:facebook_video_downloader/controllers/download_controller.dart';
 import 'package:facebook_video_downloader/controllers/download_controller.dart';
+import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -126,6 +127,7 @@ class HistoryController extends GetxController {
   // ================= NAVIGATION =================
 
   void goToPremium() async {
+    if (!AppFeatures.showPremiumScreen) return;
     await logNavigateToPremium();
     Get.to(() => const PremiumScreen());
   }

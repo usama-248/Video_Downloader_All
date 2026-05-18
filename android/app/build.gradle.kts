@@ -37,8 +37,8 @@ android {
         // FFmpeg Kit requires API 24+.
         minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
     }
 
     signingConfigs {
