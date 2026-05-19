@@ -20,7 +20,7 @@ class PremiumController extends GetxController {
       barrierDismissible: false,
     );
     
-    // TODO: Add actual payment processing here
+   
     await Future.delayed(const Duration(seconds: 2));
     
     // Close loading dialog

@@ -1,5 +1,8 @@
+
+
 import 'dart:io';
 
+import 'package:facebook_video_downloader/controllers/history_controller.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/controllers/download_controller.dart';
 import 'package:facebook_video_downloader/core/config/app_features.dart';
@@ -30,6 +33,7 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final DownloadController controller = Get.find<DownloadController>();
+  final HistoryController analyticsController = Get.put(HistoryController());
 
   final Set<int> _deletingItems = {};
   int _currentBottomNavIndex = 2;
@@ -42,6 +46,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
     super.initState();
     controller.loadHistory();
     _loadBannerAd();
+    _logScreenView();
+  }
+
+  void _logScreenView() async {
+    await analyticsController.logScreenViewEvent();
   }
 
   void _loadBannerAd() {
@@ -54,6 +63,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           setState(() {
             _isAdLoaded = true;
           });
+          analyticsController.logBannerAdLoaded();
         },
         onAdFailedToLoad: (ad, error) {
           print('History Screen BannerAd failed to load: $error');
@@ -61,6 +71,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           setState(() {
             _isAdLoaded = false;
           });
+          analyticsController.logBannerAdFailed(error.toString());
         },
       ),
     )..load();
@@ -73,19 +84,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Future<void> openInChrome(String url) async {
+    await analyticsController.logOpenFacebook();
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     }
   }
 
   void _onBottomNavTap(int index) {
+    String tabName = '';
     if (index == 0) {
+      tabName = 'home';
+      analyticsController.logBottomNavTap(index, tabName);
       if (widget.onBackToHome != null) {
         widget.onBackToHome!();
       } else {
         Navigator.pop(context);
       }
     } else if (index == 1) {
+      tabName = 'watch';
+      analyticsController.logBottomNavTap(index, tabName);
       if (widget.onBackToHome != null) {
         widget.onBackToHome!();
       } else {
@@ -110,11 +127,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
         content: Text('Delete "${item['fileName']}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () {
+              analyticsController.logDeleteConfirmDialog('cancel');
+              Navigator.pop(context, false);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              analyticsController.logDeleteConfirmDialog('confirm');
+              Navigator.pop(context, true);
+            },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -122,7 +145,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Future<String?> _getThumbnail(String videoPath) async {
+  Future<String?> _getThumbnail(String videoPath, String fileName) async {
     try {
       final tempDir = await getTemporaryDirectory();
       final thumbnail = await VideoThumbnail.thumbnailFile(
@@ -174,9 +197,87 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  Future<void> _refreshHistory() async {
+    final previousCount = controller.downloadHistory.length;
+    await analyticsController.logRefreshHistory(previousCount);
+    await controller.loadHistory();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('History refreshed'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
+  Future<void> _playVideo(Map<String, dynamic> item, int position) async {
+    await analyticsController.logVideoItemClick(
+      item['fileName'].toString(),
+      position,
+    );
+    await analyticsController.logPlayVideo(
+      item['fileName'].toString(),
+      item['quality'].toString(),
+      item['fileSize'].toString(),
+    );
+    await OpenFile.open(item['filePath'].toString());
+  }
+
+  Future<void> _deleteVideo(Map<String, dynamic> item, int itemId) async {
+    final remainingCount = controller.downloadHistory.length - 1;
+    await analyticsController.logDeleteVideo(
+      item['fileName'].toString(),
+      item['quality'].toString(),
+      remainingCount,
+    );
+
+    setState(() {
+      _deletingItems.add(itemId);
+    });
+    await controller.deleteHistoryItem(item['id'], item['filePath']);
+    setState(() {
+      _deletingItems.remove(itemId);
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${item['fileName']} deleted')));
+  }
+
+  void _goToPremium() async {
+    await analyticsController.logNavigateToPremium();
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const PremiumScreen()),
+    );
+  }
+
+  void _goToSettings() async {
+    await analyticsController.logNavigateToSettings();
+    if (widget.showBottomNav) {
+      widget.onBackToHome?.call();
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SettingsScreen()),
+      );
+    }
+  }
+
+  void _goBack() async {
+    await analyticsController.logBackButton();
+    if (widget.onBackToHome != null) {
+      widget.onBackToHome!();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    print('History Screen build...');
+    // Track empty history if needed
+    if (controller.downloadHistory.isEmpty) {
+      analyticsController.onEmptyHistoryShown();
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -184,13 +285,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         leading: widget.showBottomNav
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  if (widget.onBackToHome != null) {
-                    widget.onBackToHome!();
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
+                onPressed: _goBack,
               )
             : null,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -251,6 +346,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               tooltip: 'Facebook',
             ),
           ),
+          // Settings Button
           SizedBox(
             width: 40,
             height: 40,
@@ -263,18 +359,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.settings, color: Colors.white, size: 22),
               ),
-              onPressed: () {
-                if (widget.showBottomNav) {
-                  widget.onBackToHome?.call();
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
-                }
-              },
+              onPressed: _goToSettings,
               tooltip: 'Settings',
             ),
           ),
@@ -307,23 +392,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF0066ff),
               unselectedItemColor: Colors.grey,
-              items: [
+              items: const [
                 BottomNavigationBarItem(
-                  icon: const ImageIcon(
+                  icon: ImageIcon(
                     AssetImage('assets/images/Home.png'),
                     size: 24,
                   ),
                   label: 'Home',
                 ),
                 BottomNavigationBarItem(
-                  icon: const ImageIcon(
+                  icon: ImageIcon(
                     AssetImage('assets/images/Watch_Video.png'),
                     size: 24,
                   ),
                   label: 'Watch',
                 ),
                 BottomNavigationBarItem(
-                  icon: const ImageIcon(
+                  icon: ImageIcon(
                     AssetImage('assets/images/FileSave.png'),
                     size: 24,
                   ),
@@ -375,15 +460,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () async {
-                await controller.loadHistory();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('History refreshed'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-              },
+              onPressed: _refreshHistory,
               child: Text(
                 'Refresh',
                 style: const TextStyle(
@@ -414,19 +491,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     item,
                   );
                   if (shouldDelete == true) {
-                    setState(() {
-                      _deletingItems.add(itemId);
-                    });
-                    await controller.deleteHistoryItem(
-                      item['id'],
-                      item['filePath'],
-                    );
-                    setState(() {
-                      _deletingItems.remove(itemId);
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${item['fileName']} deleted')),
-                    );
+                    await _deleteVideo(item, itemId);
                   }
                   return shouldDelete;
                 },
@@ -459,7 +524,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   child: ListTile(
                     leading: FutureBuilder<String?>(
-                      future: _getThumbnail(item['filePath']),
+                      future: _getThumbnail(
+                        item['filePath'],
+                        item['fileName'].toString(),
+                      ),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -550,9 +618,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         Icons.play_arrow,
                         color: Color.fromARGB(255, 48, 172, 85),
                       ),
-                      onPressed: () async {
-                        await OpenFile.open(item['filePath']);
-                      },
+                      onPressed: () => _playVideo(item, index),
                     ),
                     onLongPress: () async {
                       final shouldDelete = await _showDeleteConfirmationDialog(
@@ -560,21 +626,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         item,
                       );
                       if (shouldDelete == true) {
-                        setState(() {
-                          _deletingItems.add(itemId);
-                        });
-                        await controller.deleteHistoryItem(
-                          item['id'],
-                          item['filePath'],
-                        );
-                        setState(() {
-                          _deletingItems.remove(itemId);
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${item['fileName']} deleted'),
-                          ),
-                        );
+                        await _deleteVideo(item, itemId);
                       }
                     },
                   ),

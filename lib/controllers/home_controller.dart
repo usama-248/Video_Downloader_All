@@ -1,3 +1,8 @@
+
+
+// ignore_for_file: avoid_print, unnecessary_underscores, deprecated_member_use
+
+import 'package:facebook_video_downloader/core/services/screen_time_tracker.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +12,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import '../core/config/admob_config.dart';
 import '../core/config/app_env.dart';
@@ -34,6 +40,10 @@ class HomeController extends GetxController {
   var isInterstitialLoaded = false.obs;
   var isWatchBannerLoaded = false.obs;
 
+  // Screen time display (optional)
+  var screenTimeText = '00:00'.obs;
+  Timer? _screenTimeUpdateTimer;
+
   // Non-observable
   BannerAd? _bannerAd;
   BannerAd? _mrecAd;
@@ -44,6 +54,9 @@ class HomeController extends GetxController {
   // Flag to check if controller is still active
   bool _isClosed = false;
 
+  // Track current tab for screen time
+  String _currentScreenName = 'BrowserTab';
+
   @override
   void onInit() {
     super.onInit();
@@ -51,15 +64,18 @@ class HomeController extends GetxController {
     urlController = TextEditingController();
     _checkAgreementStatus();
     _logScreenView();
+    _logAppOpen();
     _loadBrowserBannerAd();
     _loadMrecAd();
     _loadInterstitialAd();
     _loadWatchBannerAd();
+    _startScreenTimeTracking(); // ✅ START SCREEN TIME TRACKING
   }
 
   @override
   void onClose() {
     _isClosed = true;
+    _stopScreenTimeTracking(); // ✅ STOP SCREEN TIME TRACKING
     // Dispose controller properly
     urlController?.dispose();
     urlController = null;
@@ -68,6 +84,77 @@ class HomeController extends GetxController {
     _interstitialAd?.dispose();
     _watchBannerAd?.dispose();
     super.onClose();
+  }
+
+  // ==================== SCREEN TIME TRACKING ====================
+
+  void _startScreenTimeTracking() {
+    // Start tracking for initial screen
+    _updateScreenTracking();
+
+    // Optional: Update timer display every second (for UI)
+    _screenTimeUpdateTimer = Timer.periodic(const Duration(seconds: 1), (
+      timer,
+    ) {
+      final seconds = ScreenTimeTracker.getCurrentTimeSpent(_currentScreenName);
+      screenTimeText.value = _formatTime(seconds);
+    });
+
+    developer.log(
+      '⏱️ Screen time tracking started for HomeController',
+      name: 'Timer',
+    );
+  }
+
+  void _stopScreenTimeTracking() {
+    // Stop tracking current screen
+    ScreenTimeTracker.stopTracking(_currentScreenName);
+
+    // Cancel UI timer
+    _screenTimeUpdateTimer?.cancel();
+    _screenTimeUpdateTimer = null;
+
+    developer.log(
+      '⏱️ Screen time tracking stopped for HomeController',
+      name: 'Timer',
+    );
+  }
+
+  void _updateScreenTracking() {
+    // Stop tracking previous screen
+    ScreenTimeTracker.stopTracking(_currentScreenName);
+
+    // Update current screen name based on tab
+    switch (currentIndex.value) {
+      case 0:
+        _currentScreenName = 'BrowserTab';
+        break;
+      case 1:
+        _currentScreenName = 'WatchTab';
+        break;
+      case 2:
+        _currentScreenName = 'SavedTab';
+        break;
+    }
+
+    // Start tracking new screen
+    ScreenTimeTracker.startTracking(_currentScreenName);
+
+    developer.log(
+      '⏱️ Switched to tracking: $_currentScreenName',
+      name: 'Timer',
+    );
+  }
+
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  }
+
+  // Get current screen time (for UI display)
+  String getCurrentScreenTime() {
+    return screenTimeText.value;
   }
 
   // Safe method to update URL text
@@ -94,34 +181,81 @@ class HomeController extends GetxController {
     );
   }
 
+  Future<void> _logAppOpen() async {
+    await _analytics.logEvent(
+      name: 'app_open',
+      parameters: {
+        'timestamp': DateTime.now().toIso8601String(),
+        'is_premium': false, // Update based on user status
+      },
+    );
+  }
+
   Future<void> logTabChange(int index, String tabName) async {
+    // Update screen tracking when tab changes
+    _updateScreenTracking();
+
     await _analytics.logEvent(
       name: 'tab_change',
-      parameters: {'tab_index': index, 'tab_name': tabName},
+      parameters: {
+        'tab_index': index,
+        'tab_name': tabName,
+        'timestamp': DateTime.now().toIso8601String(),
+      },
     );
   }
 
   Future<void> logDisclaimerAgreed() async {
     await _analytics.logEvent(
       name: 'disclaimer_agreed',
-      parameters: {'timestamp': DateTime.now().toIso8601String()},
+      parameters: {
+        'timestamp': DateTime.now().toIso8601String(),
+        'decision': 'accept',
+      },
     );
   }
 
   Future<void> logDisclaimerCancelled() async {
-    await _analytics.logEvent(name: 'disclaimer_cancelled', parameters: {});
+    await _analytics.logEvent(
+      name: 'disclaimer_cancelled',
+      parameters: {
+        'timestamp': DateTime.now().toIso8601String(),
+        'decision': 'cancel',
+      },
+    );
   }
 
   Future<void> logPasteLink() async {
-    await _analytics.logEvent(name: 'paste_link', parameters: {});
+    await _analytics.logEvent(
+      name: 'paste_link_click',
+      parameters: {
+        'button_name': 'paste_button',
+        'screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logClearUrl() async {
+    await _analytics.logEvent(
+      name: 'clear_url_click',
+      parameters: {
+        'button_name': 'clear_button',
+        'screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
   }
 
   Future<void> logFetchVideo(String url) async {
     await _analytics.logEvent(
-      name: 'fetch_video',
+      name: 'fetch_video_click',
       parameters: {
+        'button_name': 'fetch_button',
         'url_length': url.length,
         'has_facebook': url.contains('facebook') ? 1 : 0,
+        'screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
       },
     );
   }
@@ -132,36 +266,234 @@ class HomeController extends GetxController {
       parameters: {
         'has_title': title != null ? 1 : 0,
         'has_thumbnail': hasThumbnail ? 1 : 0,
+        'screen': 'BrowserTab',
       },
     );
   }
 
   Future<void> logDownloadClick() async {
     await _analytics.logEvent(
-      name: 'download_click_from_browser',
-      parameters: {},
+      name: 'download_click',
+      parameters: {
+        'button_name': 'download_button',
+        'from_screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
     );
   }
 
   Future<void> logNavigateToWebView(String url) async {
     await _analytics.logEvent(
-      name: 'navigate_to_webview',
-      parameters: {'from_screen': 'BrowserTab', 'url_length': url.length},
+      name: 'open_in_browser',
+      parameters: {
+        'button_name': 'open_in_browser_button',
+        'from_screen': 'BrowserTab',
+        'url_length': url.length,
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logRetryFetch() async {
+    await _analytics.logEvent(
+      name: 'retry_fetch_click',
+      parameters: {
+        'button_name': 'retry_button',
+        'screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logShareVideo() async {
+    await _analytics.logEvent(
+      name: 'share_video_click',
+      parameters: {
+        'button_name': 'share_button',
+        'content_type': 'video',
+        'screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logSaveToDevice() async {
+    await _analytics.logEvent(
+      name: 'save_to_device_click',
+      parameters: {
+        'button_name': 'save_button',
+        'content_type': 'video',
+        'screen': 'BrowserTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
     );
   }
 
   Future<void> logOpenFacebook() async {
     await _analytics.logEvent(
-      name: 'open_facebook_from_watch_tab',
-      parameters: {},
+      name: 'open_facebook_click',
+      parameters: {
+        'button_name': 'facebook_button',
+        'from_screen': 'WatchTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logRefreshWatchTab() async {
+    await _analytics.logEvent(
+      name: 'refresh_watch_tab_click',
+      parameters: {
+        'button_name': 'refresh_button',
+        'screen': 'WatchTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
     );
   }
 
   Future<void> logViewHelpGuide() async {
     await _analytics.logEvent(
-      name: 'view_help_guide',
-      parameters: {'from_screen': 'WatchTab'},
+      name: 'help_guide_click',
+      parameters: {
+        'button_name': 'help_button',
+        'from_screen': 'WatchTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
     );
+  }
+
+  Future<void> logHelpGuideGotIt() async {
+    await _analytics.logEvent(
+      name: 'help_guide_got_it_click',
+      parameters: {
+        'button_name': 'got_it_button',
+        'dialog_name': 'HelpGuide',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logPremiumButtonClick() async {
+    await _analytics.logEvent(
+      name: 'premium_button_click',
+      parameters: {
+        'button_name': 'premium_button',
+        'from_screen': _getCurrentScreenName(),
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logSettingsButtonClick() async {
+    await _analytics.logEvent(
+      name: 'settings_button_click',
+      parameters: {
+        'button_name': 'settings_button',
+        'from_screen': _getCurrentScreenName(),
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logHistoryButtonClick() async {
+    await _analytics.logEvent(
+      name: 'history_button_click',
+      parameters: {
+        'button_name': 'history_button',
+        'from_screen': _getCurrentScreenName(),
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logDeleteAllSaved() async {
+    await _analytics.logEvent(
+      name: 'delete_all_saved_click',
+      parameters: {
+        'button_name': 'delete_all_button',
+        'screen': 'SavedTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logDeleteSingleSaved(int index, String videoTitle) async {
+    await _analytics.logEvent(
+      name: 'delete_single_saved_click',
+      parameters: {
+        'button_name': 'delete_button',
+        'item_index': index,
+        'video_title': videoTitle.length > 50
+            ? videoTitle.substring(0, 50)
+            : videoTitle,
+        'screen': 'SavedTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logPlaySavedVideo(String videoTitle) async {
+    await _analytics.logEvent(
+      name: 'play_saved_video_click',
+      parameters: {
+        'button_name': 'play_button',
+        'video_title': videoTitle.length > 50
+            ? videoTitle.substring(0, 50)
+            : videoTitle,
+        'screen': 'SavedTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logShareSavedVideo(String videoTitle) async {
+    await _analytics.logEvent(
+      name: 'share_saved_video_click',
+      parameters: {
+        'button_name': 'share_button',
+        'video_title': videoTitle.length > 50
+            ? videoTitle.substring(0, 50)
+            : videoTitle,
+        'content_type': 'saved_video',
+        'screen': 'SavedTab',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logVideoPlayerClose() async {
+    await _analytics.logEvent(
+      name: 'video_player_close_click',
+      parameters: {
+        'button_name': 'close_button',
+        'screen': 'VideoPlayer',
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  Future<void> logBackButtonClick() async {
+    await _analytics.logEvent(
+      name: 'back_button_click',
+      parameters: {
+        'button_name': 'back_button',
+        'from_screen': _getCurrentScreenName(),
+        'timestamp': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  String _getCurrentScreenName() {
+    switch (currentIndex.value) {
+      case 0:
+        return 'BrowserTab';
+      case 1:
+        return 'WatchTab';
+      case 2:
+        return 'SavedTab';
+      default:
+        return 'HomeScreen';
+    }
   }
 
   // ==================== Disclaimer Methods ====================
@@ -199,7 +531,18 @@ class HomeController extends GetxController {
 
     Get.dialog(
       WillPopScope(
-        onWillPop: () async => false,
+        onWillPop: () async {
+          // Log back button press on dialog
+          await _analytics.logEvent(
+            name: 'disclaimer_back_press',
+            parameters: {
+              'button_name': 'back_button',
+              'dialog': 'Disclaimer',
+              'timestamp': DateTime.now().toIso8601String(),
+            },
+          );
+          return false; // Prevent back press
+        },
         child: AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -358,8 +701,21 @@ class HomeController extends GetxController {
             ),
           ),
           actions: [
+            // CANCEL BUTTON
             TextButton(
-              onPressed: () => SystemNavigator.pop(),
+              onPressed: () async {
+                // Analytics for Cancel button
+                await _analytics.logEvent(
+                  name: 'disclaimer_cancel_click',
+                  parameters: {
+                    'button_name': 'cancel_button',
+                    'dialog': 'Disclaimer',
+                    'timestamp': DateTime.now().toIso8601String(),
+                  },
+                );
+                await logDisclaimerCancelled();
+                SystemNavigator.pop();
+              },
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -379,8 +735,19 @@ class HomeController extends GetxController {
                 ),
               ),
             ),
+            // ACCEPT BUTTON
             ElevatedButton(
               onPressed: () async {
+                // Analytics for Accept button
+                await _analytics.logEvent(
+                  name: 'disclaimer_accept_click',
+                  parameters: {
+                    'button_name': 'accept_button',
+                    'dialog': 'Disclaimer',
+                    'decision_time': DateTime.now().toIso8601String(),
+                    'app_version': '1.0.0',
+                  },
+                );
                 await _saveAgreementStatus(true);
                 if (Get.context != null && !_isClosed) Get.back();
               },
@@ -529,8 +896,10 @@ class HomeController extends GetxController {
 
   Future<void> pasteLink() async {
     if (_isClosed) return;
-    await showInterstitialAd();
+
+    // Analytics for paste button
     await logPasteLink();
+    await showInterstitialAd();
 
     final data = await Clipboard.getData('text/plain');
     if (data?.text != null && data!.text!.isNotEmpty) {
@@ -542,6 +911,21 @@ class HomeController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+
+  Future<void> clearUrl() async {
+    if (_isClosed) return;
+
+    // Analytics for clear button
+    await logClearUrl();
+
+    updateUrlText('');
+    Get.snackbar(
+      'Cleared',
+      'URL cleared successfully!',
+      duration: const Duration(seconds: 1),
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   Future<void> fetchVideo() async {
@@ -567,6 +951,15 @@ class HomeController extends GetxController {
     await _fetchMetadata(url);
 
     isFetching.value = false;
+  }
+
+  Future<void> retryFetch() async {
+    if (_isClosed) return;
+
+    // Analytics for retry button
+    await logRetryFetch();
+
+    await fetchVideo();
   }
 
   Future<void> _fetchMetadata(String url) async {
@@ -609,6 +1002,38 @@ class HomeController extends GetxController {
     Get.toNamed('/webview', arguments: {'url': finalUrl});
   }
 
+  Future<void> shareVideo() async {
+    if (_isClosed) return;
+
+    // Analytics for share button
+    await logShareVideo();
+
+    // Implement share functionality
+    String videoUrl = getUrlText();
+    if (videoUrl.isNotEmpty) {
+      // Add your share logic here
+      Get.snackbar(
+        'Share',
+        'Sharing video...',
+        duration: const Duration(seconds: 1),
+      );
+    }
+  }
+
+  Future<void> saveToDevice() async {
+    if (_isClosed) return;
+
+    // Analytics for save button
+    await logSaveToDevice();
+
+    // Implement save to device functionality
+    Get.snackbar(
+      'Save',
+      'Saving video to device...',
+      duration: const Duration(seconds: 1),
+    );
+  }
+
   Future<void> openInChrome(String url) async {
     final Uri uri = Uri.parse(url);
     try {
@@ -627,13 +1052,20 @@ class HomeController extends GetxController {
     imageUrl.value = null;
   }
 
-  // ==================== Navigation Methods ====================
+  // ==================== Watch Tab Methods ====================
 
-  void changeTab(int index) {
+  Future<void> refreshWatchTab() async {
     if (_isClosed) return;
-    currentIndex.value = index;
-    String tabName = index == 0 ? 'Home' : (index == 1 ? 'Watch' : 'Saved');
-    logTabChange(index, tabName);
+
+    // Analytics for refresh button
+    await logRefreshWatchTab();
+
+    // Implement refresh logic
+    Get.snackbar(
+      'Refresh',
+      'Refreshing content...',
+      duration: const Duration(seconds: 1),
+    );
   }
 
   void goToPremium() {
@@ -689,8 +1121,13 @@ class HomeController extends GetxController {
           ],
         ),
         actions: [
+          // GOT IT BUTTON
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () async {
+              // Analytics for Got It button
+              await logHelpGuideGotIt();
+              Get.back();
+            },
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF0066ff),
             ),
@@ -729,6 +1166,98 @@ class HomeController extends GetxController {
         Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
       ],
     );
+  }
+
+  // ==================== Saved Tab Methods ====================
+
+  Future<void> deleteAllSaved() async {
+    if (_isClosed) return;
+
+    // Show confirmation dialog first
+    bool? confirm = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Delete All'),
+        content: const Text(
+          'Are you sure you want to delete all saved videos?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Analytics for delete all button
+      await logDeleteAllSaved();
+
+      // Implement delete all logic
+      Get.snackbar('Deleted', 'All videos deleted successfully!');
+    }
+  }
+
+  Future<void> deleteSingleSaved(int index, String videoTitle) async {
+    if (_isClosed) return;
+
+    // Analytics for delete single button
+    await logDeleteSingleSaved(index, videoTitle);
+
+    // Implement delete single logic
+    Get.snackbar('Deleted', 'Video deleted successfully!');
+  }
+
+  Future<void> playSavedVideo(String videoTitle) async {
+    if (_isClosed) return;
+
+    // Analytics for play button
+    await logPlaySavedVideo(videoTitle);
+
+    // Implement play video logic
+    Get.toNamed('/video_player', arguments: {'title': videoTitle});
+  }
+
+  Future<void> shareSavedVideo(String videoTitle) async {
+    if (_isClosed) return;
+
+    // Analytics for share button on saved video
+    await logShareSavedVideo(videoTitle);
+
+    // Implement share logic
+    Get.snackbar('Share', 'Sharing $videoTitle...');
+  }
+
+  Future<void> closeVideoPlayer() async {
+    if (_isClosed) return;
+
+    // Analytics for close button
+    await logVideoPlayerClose();
+
+    Get.back();
+  }
+
+  // ==================== Navigation Methods ====================
+
+  void changeTab(int index) {
+    if (_isClosed) return;
+    currentIndex.value = index;
+    String tabName = index == 0 ? 'Home' : (index == 1 ? 'Watch' : 'Saved');
+    logTabChange(index, tabName);
+  }
+
+  void onBackPressed() async {
+    if (_isClosed) return;
+
+    // Analytics for back button
+    await logBackButtonClick();
+
+    Get.back();
   }
 
   String? get thumbnailUrl => imageUrl.value;

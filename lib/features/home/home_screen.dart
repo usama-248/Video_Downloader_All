@@ -1,11 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/controllers/home_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);

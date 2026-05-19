@@ -1,6 +1,6 @@
 
 
-// ignore_for_file: unnecessary_null_comparison, unused_field
+// ignore_for_file: deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
 
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -822,8 +822,9 @@ class WebViewControllerr extends GetxController {
         estimatedSize: selectedDownloadSize.value,
       );
       await downloadController.loadHistory();
-      if (!gallerySaved)
+      if (!gallerySaved) {
         Get.snackbar('Info', 'Video saved to app folder: $fileName');
+      }
       return tempPath;
     } catch (e) {
       return null;
