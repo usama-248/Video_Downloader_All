@@ -78,7 +78,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     )..load();
   }
-
   @override
   void dispose() {
     _bannerAd?.dispose();
