@@ -1,11 +1,10 @@
-import 'dart:ui';
+// lib/controllers/language_controller.dart
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageController extends GetxController {
-  static const String KEY_LANGUAGE = 'selected_language';
-  
-  var currentLocale = const Locale('en').obs;
+  Rx<Locale> currentLocale = Rx<Locale>(Get.locale ?? const Locale('en'));
   
   @override
   void onInit() {
@@ -13,28 +12,36 @@ class LanguageController extends GetxController {
     loadSavedLanguage();
   }
   
-  Future<void> loadSavedLanguage() async {
+  void loadSavedLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    String? languageCode = prefs.getString(KEY_LANGUAGE);
+    String? languageCode = prefs.getString('language_code');
     
     if (languageCode != null && languageCode.isNotEmpty) {
-      currentLocale.value = Locale(languageCode);
-      Get.updateLocale(Locale(languageCode));
+      updateLanguage(Locale(languageCode));
     }
   }
   
+  void updateLanguage(Locale locale) {
+    currentLocale.value = locale;
+    Get.updateLocale(locale);
+    debugPrint('🔄 Language updated to: ${locale.languageCode}');
+  }
+  
   Future<void> changeLanguage(String languageCode) async {
-    currentLocale.value = Locale(languageCode);
-    
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(KEY_LANGUAGE, languageCode);
+    await prefs.setString('language_code', languageCode);
     
-    // Update app language
-    Get.updateLocale(Locale(languageCode));
+    final locale = Locale(languageCode);
+    currentLocale.value = locale;
+    Get.updateLocale(locale);
+    
+    debugPrint('✅ Language changed to: $languageCode');
   }
   
   String getCurrentLanguageName() {
-    switch(currentLocale.value.languageCode) {
+    switch (currentLocale.value.languageCode) {
+      case 'en':
+        return 'English';
       case 'ur':
         return 'Urdu';
       case 'ar':
@@ -42,5 +49,9 @@ class LanguageController extends GetxController {
       default:
         return 'English';
     }
+  }
+  
+  String getCurrentLanguageCode() {
+    return currentLocale.value.languageCode;
   }
 }

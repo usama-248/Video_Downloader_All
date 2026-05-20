@@ -13,3 +13,5 @@ abstract class AppRoutes {
   static const settings = '/settings';
   static const webview = '/webview';
 }
+
+

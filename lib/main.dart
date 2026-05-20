@@ -1,3 +1,7 @@
+
+
+
+
 import 'dart:io';
 
 import 'package:facebook_video_downloader/firebase_options.dart';
@@ -15,6 +19,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:facebook_video_downloader/core/config/admob_config.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 FirebaseAnalytics? analytics;
 
@@ -54,10 +59,33 @@ Future<void> main() async {
     _scanDownloadedVideos();
   }
 
-  runApp(const MyApp());
+  /// 5. Load saved language preference
+  final prefs = await SharedPreferences.getInstance();
+  final savedLanguage = prefs.getString('language_code');
+  Locale initialLocale;
+  
+  if (savedLanguage != null && savedLanguage.isNotEmpty) {
+    initialLocale = Locale(savedLanguage);
+    debugPrint('✅ Loaded saved language: $savedLanguage');
+  } else {
+    // Use device locale if supported, otherwise English
+    final deviceLocale = Get.deviceLocale;
+    if (deviceLocale != null && 
+        (deviceLocale.languageCode == 'en' || 
+         deviceLocale.languageCode == 'ur' || 
+         deviceLocale.languageCode == 'ar')) {
+      initialLocale = Locale(deviceLocale.languageCode);
+      debugPrint('✅ Using device language: ${deviceLocale.languageCode}');
+    } else {
+      initialLocale = const Locale('en');
+      debugPrint('✅ Using default language: en');
+    }
+  }
+
+  runApp(MyApp(initialLocale: initialLocale));
 }
 
-/// 🔥 FIXED: safer background call
+/// Media scanner for Android
 Future<void> _scanDownloadedVideos() async {
   try {
     await Process.run('am', [
@@ -74,7 +102,9 @@ Future<void> _scanDownloadedVideos() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Locale initialLocale;
+  
+  const MyApp({super.key, required this.initialLocale});
 
   @override
   Widget build(BuildContext context) {
@@ -82,12 +112,8 @@ class MyApp extends StatelessWidget {
       title: 'Video Downloader',
       debugShowCheckedModeBanner: false,
 
-      /// Routing
-      initialRoute: '/splash',
-      getPages: AppPages.routes,
-      initialBinding: InitialBinding(),
-
-      /// Localization
+      /// Localization - Use initialLocale directly
+      locale: initialLocale,
       fallbackLocale: const Locale('en'),
       supportedLocales: const [
         Locale('en'),
@@ -100,6 +126,11 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+
+      /// Routing
+      initialRoute: '/splash',
+      getPages: AppPages.routes,
+      initialBinding: InitialBinding(),
 
       /// Theme
       theme: ThemeData(

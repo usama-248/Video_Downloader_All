@@ -1,8 +1,11 @@
 
+
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:facebook_video_downloader/core/config/app_features.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 
 /// Brand blues and neutrals aligned with the app splash screen.
 const Color _kBrandBlue = Color(0xFF0066ff);
@@ -73,6 +76,8 @@ class _InterestScreenState extends State<InterestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -87,7 +92,7 @@ class _InterestScreenState extends State<InterestScreen> {
             children: [
               const SizedBox(height: 40),
               Text(
-                'Select Interests'.tr,
+                localizations.selectInterests,
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
@@ -96,7 +101,7 @@ class _InterestScreenState extends State<InterestScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Whats your Interests?'.tr,
+                localizations.whatsYourInterests,
                 style: TextStyle(fontSize: 14, color: _kTextSecondary),
               ),
               const SizedBox(height: 32),
@@ -139,7 +144,7 @@ class _InterestScreenState extends State<InterestScreen> {
                       height: 52,
                       child: ElevatedButton(
                         onPressed: _selectedInterests.length >= 2
-                            ? _saveAndContinue
+                            ? () => _saveAndContinue(context)
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kBrandBlue,
@@ -149,7 +154,7 @@ class _InterestScreenState extends State<InterestScreen> {
                           ),
                         ),
                         child: Text(
-                          '${'Continue'.tr} (${_selectedInterests.length}/2+)',
+                          '${localizations.continueText} (${_selectedInterests.length}/2+)',
                           style: TextStyle(
                             color: _selectedInterests.length >= 2
                                 ? Colors.white
@@ -162,7 +167,7 @@ class _InterestScreenState extends State<InterestScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          'Select At Least Two'.tr,
+                          localizations.selectAtLeastTwo,
                           style: TextStyle(
                             fontSize: 12,
                             color: _kTextSecondary,
@@ -239,7 +244,7 @@ class _InterestScreenState extends State<InterestScreen> {
     }
   }
 
-  Future<void> _saveAndContinue() async {
+  Future<void> _saveAndContinue(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_selected_interests', true);
     await prefs.setStringList(

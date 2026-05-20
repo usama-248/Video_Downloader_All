@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -12,8 +11,6 @@ class WebViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(WebViewControllerr(url: url), tag: url);
-
-   
 
     return Scaffold(
       appBar: AppBar(

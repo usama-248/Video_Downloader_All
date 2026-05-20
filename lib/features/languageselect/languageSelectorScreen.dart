@@ -10,7 +10,7 @@ class LanguageSelectorScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // This is the correct way to get the controller
     final LanguageController controller = Get.find<LanguageController>();
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -30,75 +30,77 @@ class LanguageSelectorScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Obx(() => Column(
-        children: [
-          const SizedBox(height: 20),
-          
-          // English Option
-          _buildLanguageOption(
-            icon: Icons.g_translate,
-            iconColor: Colors.blue,
-            languageName: 'English',
-            languageCode: 'en',
-            isSelected: controller.currentLocale.value.languageCode == 'en',
-            onTap: () => controller.changeLanguage('en'),
-          ),
-          _buildDivider(),
-          
-          // Urdu Option
-          _buildLanguageOption(
-            icon: Icons.g_translate,
-            iconColor: Colors.green,
-            languageName: 'اردو',
-            languageCode: 'ur',
-            isSelected: controller.currentLocale.value.languageCode == 'ur',
-            onTap: () => controller.changeLanguage('ur'),
-          ),
-          _buildDivider(),
-          
-          // Arabic Option
-          _buildLanguageOption(
-            icon: Icons.g_translate,
-            iconColor: Colors.red,
-            languageName: 'العربية',
-            languageCode: 'ar',
-            isSelected: controller.currentLocale.value.languageCode == 'ar',
-            onTap: () => controller.changeLanguage('ar'),
-          ),
-          _buildDivider(),
-          
-          const SizedBox(height: 30),
-          
-          // Continue Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () => _saveAndContinue(controller),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0066ff),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+      body: Obx(
+        () => Column(
+          children: [
+            const SizedBox(height: 20),
+
+            // English Option
+            _buildLanguageOption(
+              icon: Icons.g_translate,
+              iconColor: Colors.blue,
+              languageName: 'English',
+              languageCode: 'en',
+              isSelected: controller.currentLocale.value.languageCode == 'en',
+              onTap: () => controller.changeLanguage('en'),
+            ),
+            _buildDivider(),
+
+            // Urdu Option
+            _buildLanguageOption(
+              icon: Icons.g_translate,
+              iconColor: Colors.green,
+              languageName: 'اردو',
+              languageCode: 'ur',
+              isSelected: controller.currentLocale.value.languageCode == 'ur',
+              onTap: () => controller.changeLanguage('ur'),
+            ),
+            _buildDivider(),
+
+            // Arabic Option
+            _buildLanguageOption(
+              icon: Icons.g_translate,
+              iconColor: Colors.red,
+              languageName: 'العربية',
+              languageCode: 'ar',
+              isSelected: controller.currentLocale.value.languageCode == 'ar',
+              onTap: () => controller.changeLanguage('ar'),
+            ),
+            _buildDivider(),
+
+            const SizedBox(height: 30),
+
+            // Continue Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () => _saveAndContinue(controller),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0066ff),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'continue'.tr,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  child: Text(
+                    'continue'.tr,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          
-          const SizedBox(height: 20),
-        ],
-      )),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 
@@ -157,7 +159,7 @@ class LanguageSelectorScreen extends StatelessWidget {
   Future<void> _saveAndContinue(LanguageController controller) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_selected_language', true);
-    
+
     Get.snackbar(
       'success'.tr,
       '${controller.getCurrentLanguageName()} ${'languageSelected'.tr}',
@@ -166,7 +168,7 @@ class LanguageSelectorScreen extends StatelessWidget {
       colorText: Colors.white,
       duration: const Duration(seconds: 2),
     );
-    
+
     await Future.delayed(const Duration(milliseconds: 500));
     Get.offAllNamed('/interest');
   }

@@ -1,6 +1,4 @@
-
-
-// ignore_for_file: unused_element
+//ignore_for_file: unused_element
 
 import 'dart:io';
 
@@ -10,6 +8,7 @@ import 'package:facebook_video_downloader/controllers/download_controller.dart';
 import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -78,6 +77,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     )..load();
   }
+
   @override
   void dispose() {
     _bannerAd?.dispose();
@@ -91,10 +91,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  void _onBottomNavTap(int index) {
+  void _onBottomNavTap(BuildContext context, int index) {
+    final localizations = AppLocalizations.of(context)!;
+
     String tabName = '';
     if (index == 0) {
-      tabName = 'home';
+      tabName = localizations.home;
       analyticsController.logBottomNavTap(index, tabName);
       if (widget.onBackToHome != null) {
         widget.onBackToHome!();
@@ -102,7 +104,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         Navigator.pop(context);
       }
     } else if (index == 1) {
-      tabName = 'watch';
+      tabName = localizations.watch;
       analyticsController.logBottomNavTap(index, tabName);
       if (widget.onBackToHome != null) {
         widget.onBackToHome!();
@@ -120,26 +122,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
     BuildContext context,
     Map<String, dynamic> item,
   ) async {
+    final localizations = AppLocalizations.of(context)!;
+
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Video'),
-        content: Text('Delete "${item['fileName']}"?'),
+        title: Text(localizations.deleteVideo),
+        content: Text('${localizations.delete} "${item['fileName']}"?'),
         actions: [
           TextButton(
             onPressed: () {
               analyticsController.logDeleteConfirmDialog('cancel');
               Navigator.pop(context, false);
             },
-            child: const Text('Cancel'),
+            child: Text(localizations.cancel),
           ),
           TextButton(
             onPressed: () {
               analyticsController.logDeleteConfirmDialog('confirm');
               Navigator.pop(context, true);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              localizations.delete,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -161,7 +168,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  String _formatDate(String dateTimeStr) {
+  String _formatDate(BuildContext context, String dateTimeStr) {
+    final localizations = AppLocalizations.of(context)!;
+
     try {
       final dateTime = DateTime.parse(dateTimeStr);
       final now = DateTime.now();
@@ -172,45 +181,50 @@ class _HistoryScreenState extends State<HistoryScreen> {
       } else if (diff.inDays > 0) {
         final days = diff.inDays;
         if (days == 1) {
-          return '$days day ago';
+          return localizations.oneDayAgo;
         } else {
-          return '$days days ago';
+          return localizations.daysAgo(days);
         }
       } else if (diff.inHours > 0) {
         final hours = diff.inHours;
         if (hours == 1) {
-          return '$hours hour ago';
+          return localizations.oneHourAgo;
         } else {
-          return '$hours hours ago';
+          return localizations.hoursAgo(hours);
         }
       } else if (diff.inMinutes > 0) {
         final minutes = diff.inMinutes;
         if (minutes == 1) {
-          return '$minutes minute ago';
+          return localizations.oneMinuteAgo;
         } else {
-          return '$minutes minutes ago';
+          return localizations.minutesAgo(minutes);
         }
       } else {
-        return 'Just now';
+        return localizations.justNow;
       }
     } catch (e) {
-      return 'Unknown date';
+      return localizations.unknownDate;
     }
   }
 
-  Future<void> _refreshHistory() async {
+  Future<void> _refreshHistory(BuildContext context) async {
+    final localizations = AppLocalizations.of(context)!;
     final previousCount = controller.downloadHistory.length;
     await analyticsController.logRefreshHistory(previousCount);
     await controller.loadHistory();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('History refreshed'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        content: Text(localizations.historyRefreshed),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
 
-  Future<void> _playVideo(Map<String, dynamic> item, int position) async {
+  Future<void> _playVideo(
+    BuildContext context,
+    Map<String, dynamic> item,
+    int position,
+  ) async {
     await analyticsController.logVideoItemClick(
       item['fileName'].toString(),
       position,
@@ -223,7 +237,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     await OpenFile.open(item['filePath'].toString());
   }
 
-  Future<void> _deleteVideo(Map<String, dynamic> item, int itemId) async {
+  Future<void> _deleteVideo(
+    BuildContext context,
+    Map<String, dynamic> item,
+    int itemId,
+  ) async {
+    final localizations = AppLocalizations.of(context)!;
     final remainingCount = controller.downloadHistory.length - 1;
     await analyticsController.logDeleteVideo(
       item['fileName'].toString(),
@@ -238,12 +257,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() {
       _deletingItems.remove(itemId);
     });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('${item['fileName']} deleted')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${item['fileName']} ${localizations.deleted}')),
+    );
   }
 
-  void _goToPremium() async {
+  void _goToPremium(BuildContext context) async {
     await analyticsController.logNavigateToPremium();
     Navigator.push(
       context,
@@ -251,7 +270,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  void _goToSettings() async {
+  void _goToSettings(BuildContext context) async {
     await analyticsController.logNavigateToSettings();
     if (widget.showBottomNav) {
       widget.onBackToHome?.call();
@@ -263,7 +282,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  void _goBack() async {
+  void _goBack(BuildContext context) async {
     await analyticsController.logBackButton();
     if (widget.onBackToHome != null) {
       widget.onBackToHome!();
@@ -274,6 +293,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     // Track empty history if needed
     if (controller.downloadHistory.isEmpty) {
       analyticsController.onEmptyHistoryShown();
@@ -286,7 +307,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         leading: widget.showBottomNav
             ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: _goBack,
+                onPressed: () => _goBack(context),
               )
             : null,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -294,7 +315,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'Video Downloader',
+            localizations.videoDownloader,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -318,15 +339,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   errorBuilder: (_, __, ___) =>
                       const Icon(Icons.star, color: Colors.white, size: 22),
                 ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PremiumScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Premium',
+                onPressed: () => _goToPremium(context),
+                tooltip: localizations.premium,
               ),
             ),
           SizedBox(
@@ -344,7 +358,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               onPressed: () {
                 openInChrome(AppEnv.facebookBaseUrl);
               },
-              tooltip: 'Facebook',
+              tooltip: localizations.facebook,
             ),
           ),
           // Settings Button
@@ -360,8 +374,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.settings, color: Colors.white, size: 22),
               ),
-              onPressed: _goToSettings,
-              tooltip: 'Settings',
+              onPressed: () => _goToSettings(context),
+              tooltip: localizations.settings,
             ),
           ),
           const SizedBox(width: 8),
@@ -381,39 +395,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
                 child: SizedBox(height: 50, child: AdWidget(ad: _bannerAd!)),
               ),
-            Expanded(child: _buildHistoryList()),
+            Expanded(child: _buildHistoryList(context)),
           ],
         ),
       ),
       bottomNavigationBar: widget.showBottomNav
           ? BottomNavigationBar(
               currentIndex: _currentBottomNavIndex,
-              onTap: _onBottomNavTap,
+              onTap: (index) => _onBottomNavTap(context, index),
               type: BottomNavigationBarType.fixed,
               backgroundColor: Colors.white,
               selectedItemColor: const Color(0xFF0066ff),
               unselectedItemColor: Colors.grey,
-              items: const [
+              items: [
                 BottomNavigationBarItem(
-                  icon: ImageIcon(
+                  icon: const ImageIcon(
                     AssetImage('assets/images/Home.png'),
                     size: 24,
                   ),
-                  label: 'Home',
+                  label: localizations.home,
                 ),
                 BottomNavigationBarItem(
-                  icon: ImageIcon(
+                  icon: const ImageIcon(
                     AssetImage('assets/images/Watch_Video.png'),
                     size: 24,
                   ),
-                  label: 'Watch',
+                  label: localizations.watch,
                 ),
                 BottomNavigationBarItem(
-                  icon: ImageIcon(
+                  icon: const ImageIcon(
                     AssetImage('assets/images/FileSave.png'),
                     size: 24,
                   ),
-                  label: 'Saved',
+                  label: localizations.saved,
                 ),
               ],
             )
@@ -421,7 +435,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildHistoryList() {
+  Widget _buildHistoryList(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final history = controller.downloadHistory;
 
     if (history.isEmpty) {
@@ -441,12 +456,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No downloads yet',
+              localizations.noDownloadsYet,
               style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 8),
             Text(
-              'Download videos from the browser',
+              localizations.downloadFromBrowser,
               style: const TextStyle(color: Colors.white60),
             ),
           ],
@@ -461,9 +476,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: _refreshHistory,
+              onPressed: () => _refreshHistory(context),
               child: Text(
-                'Refresh',
+                localizations.refresh,
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -492,7 +507,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     item,
                   );
                   if (shouldDelete == true) {
-                    await _deleteVideo(item, itemId);
+                    await _deleteVideo(context, item, itemId);
                   }
                   return shouldDelete;
                 },
@@ -602,11 +617,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Quality: ${item['quality']} | Size: ${item['fileSize']}',
+                          '${localizations.quality}: ${item['quality']} | ${localizations.size}: ${item['fileSize']}',
                           style: const TextStyle(color: Colors.black54),
                         ),
                         Text(
-                          _formatDate(item['dateTime']),
+                          _formatDate(context, item['dateTime']),
                           style: const TextStyle(
                             fontSize: 11,
                             color: Colors.black45,
@@ -619,7 +634,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         Icons.play_arrow,
                         color: Color.fromARGB(255, 48, 172, 85),
                       ),
-                      onPressed: () => _playVideo(item, index),
+                      onPressed: () => _playVideo(context, item, index),
                     ),
                     onLongPress: () async {
                       final shouldDelete = await _showDeleteConfirmationDialog(
@@ -627,7 +642,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         item,
                       );
                       if (shouldDelete == true) {
-                        await _deleteVideo(item, itemId);
+                        await _deleteVideo(context, item, itemId);
                       }
                     },
                   ),

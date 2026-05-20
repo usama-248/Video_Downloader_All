@@ -7,6 +7,7 @@ import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/language_screen.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
@@ -17,6 +18,8 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -24,7 +27,7 @@ class SettingsScreen extends StatelessWidget {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'Settings'.tr,
+            localizations.settings,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -52,33 +55,31 @@ class SettingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top Features Section
-              _buildSectionHeader('Top Features'.tr),
+              _buildSectionHeader(context, localizations.topFeatures),
               _buildFeatureTile(
+                context,
                 icon: Icons.download,
                 iconColor: Colors.blue,
-                title: 'Download Video'.tr,
-                subtitle: 'Use the browser to download videos'.tr,
+                title: localizations.downloadVideo,
+                subtitle: localizations.useBrowserToDownloadVideos,
                 onTap: () {
                   Get.back();
-                  Get.snackbar(
-                    'Download Video'.tr,
-                    'Use the browser to download videos',
-                    snackPosition: SnackPosition.BOTTOM,
-                  );
                 },
               ),
               _buildFeatureTile(
+                context,
                 icon: Icons.facebook,
                 iconColor: const Color(0xFF0066ff),
-                title: 'Watch Video'.tr,
-                subtitle: 'Watch Videos'.tr,
-                onTap: () => _launchFacebook(),
+                title: localizations.watchVideo,
+                subtitle: localizations.watchVideos,
+                onTap: () => _launchFacebook(context),
               ),
               _buildFeatureTile(
+                context,
                 icon: Icons.folder_open,
                 iconColor: Colors.green,
-                title: 'Saved Videos'.tr,
-                subtitle: 'Open Downloaded Videos'.tr,
+                title: localizations.savedVideos,
+                subtitle: localizations.openDownloadedVideos,
                 onTap: () {
                   Get.to(
                     () => HistoryScreen(
@@ -92,9 +93,10 @@ class SettingsScreen extends StatelessWidget {
                 },
               ),
               _buildFeatureTileWithImage(
+                context,
                 imagePath: 'assets/images/Language.png',
-                title: 'Languages'.tr,
-                subtitle: 'Choose your Language'.tr,
+                title: localizations.languages,
+                subtitle: localizations.chooseYourLanguage,
                 onTap: () {
                   Get.to(() => const LanguageSelectorScreen());
                 },
@@ -103,63 +105,70 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Communications Section
-              _buildSectionHeader('Communications'.tr),
+              _buildSectionHeader(context, localizations.communications),
 
               if (AppFeatures.showPremiumScreen)
                 _buildFeatureTile(
+                  context,
                   icon: Icons.subscriptions,
                   iconColor: Colors.deepPurple,
-                  title: 'Manage Subscription'.tr,
-                  subtitle: 'Choose your Plan'.tr,
+                  title: localizations.manageSubscription,
+                  subtitle: localizations.chooseYourPlan,
                   onTap: () {
                     Get.to(() => const PremiumScreen());
                   },
                 ),
               _buildFeatureTile(
+                context,
                 icon: Icons.star_rate_rounded,
                 iconColor: Colors.amber,
-                title: 'Give Us Review'.tr,
-                subtitle: 'Support Us With Review'.tr,
-                onTap: () => _launchReview(),
+                title: localizations.giveUsReview,
+                subtitle: localizations.supportUsWithReview,
+                onTap: () => _launchReview(context),
               ),
               _buildFeatureTile(
+                context,
                 icon: Icons.share,
                 iconColor: Colors.orange,
-                title: 'Share App'.tr,
-                subtitle: 'Share the App with Your Friends'.tr,
+                title: localizations.shareApp,
+                subtitle: localizations.shareAppWithFriends,
                 onTap: () => _shareApp(),
               ),
               _buildFeatureTile(
+                context,
                 icon: Icons.apps_rounded,
                 iconColor: Colors.purple,
-                title: 'More Apps'.tr,
-                subtitle: 'Discover Our Apps'.tr,
-                onTap: () => _launchMoreApps(),
+                title: localizations.moreApps,
+                subtitle: localizations.discoverOurApps,
+                onTap: () => _launchMoreApps(context),
               ),
 
               _buildFeatureTile(
+                context,
                 icon: Icons.description_outlined,
                 iconColor: Colors.indigo,
-                title: 'Terms of Use'.tr,
-                subtitle: 'Read Terms and Conditions'.tr,
-                onTap: () => _launchTermsOfUse(),
+                title: localizations.termsOfUse,
+                subtitle: localizations.readTermsAndConditions,
+                onTap: () => _launchTermsOfUse(context),
               ),
 
               _buildFeatureTile(
+                context,
                 icon: Icons.privacy_tip,
                 iconColor: Colors.teal,
-                title: 'Privacy Policy'.tr,
-                subtitle: 'Read Our Privacy Policy'.tr,
-                onTap: () => _launchPrivacyPolicy(),
+                title: localizations.privacyPolicy,
+                subtitle: localizations.readOurPrivacyPolicy,
+                onTap: () => _launchPrivacyPolicy(context),
               ),
 
               _buildFeatureTile(
+                context,
                 backgroundColor: Colors.white.withOpacity(0.95),
                 icon: Icons.copyright,
                 iconColor: Colors.grey,
-                title: 'Disclaimer'.tr,
-                subtitle: 'Disclaimer App'.tr,
-                onTap: () => _showDisclaimerDialog(),
+                title: localizations.disclaimer,
+                subtitle: localizations.disclaimerApp,
+                onTap: () => _showDisclaimerDialog(context),
               ),
 
               const SizedBox(height: 30),
@@ -171,7 +180,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   // ====================== BUILDER WIDGETS ======================
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       child: Text(
@@ -185,7 +194,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureTile({
+  Widget _buildFeatureTile(
+    BuildContext context, {
     required IconData icon,
     required Color iconColor,
     required String title,
@@ -235,7 +245,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureTileWithImage({
+  Widget _buildFeatureTileWithImage(
+    BuildContext context, {
     required String imagePath,
     required String title,
     required String subtitle,
@@ -282,7 +293,13 @@ class SettingsScreen extends StatelessWidget {
 
   // ====================== LAUNCH METHODS ======================
 
-  Future<void> _launchURL(String url, String errorMsg) async {
+  Future<void> _launchURL(
+    BuildContext context,
+    String url,
+    String errorMsg,
+  ) async {
+    final localizations = AppLocalizations.of(context)!;
+
     try {
       final Uri uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
@@ -291,29 +308,50 @@ class SettingsScreen extends StatelessWidget {
         throw 'Could not launch URL';
       }
     } catch (e) {
-      Get.snackbar('Error', errorMsg, snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        localizations.error,
+        errorMsg,
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
-  void _launchReview() {
-    _launchURL(AppEnv.rateUsUrl, 'Could not open Play Store for review');
+  void _launchReview(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    _launchURL(
+      context,
+      AppEnv.rateUsUrl,
+      localizations.couldNotOpenPlayStoreForReview,
+    );
   }
 
-  void _launchMoreApps() {
-    _launchURL(AppEnv.moreAppsUrl, 'Could not open More Apps');
+  void _launchMoreApps(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    _launchURL(context, AppEnv.moreAppsUrl, localizations.couldNotOpenMoreApps);
   }
 
-  void _launchTermsOfUse() {
-    _launchURL(AppEnv.termsOfUseUrl, 'Could not open Terms of Use');
+  void _launchTermsOfUse(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    _launchURL(
+      context,
+      AppEnv.termsOfUseUrl,
+      localizations.couldNotOpenTermsOfUse,
+    );
   }
 
-  void _launchPrivacyPolicy() {
-    _launchURL(AppEnv.privacyPolicyUrl, 'Could not open Privacy Policy');
+  void _launchPrivacyPolicy(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    _launchURL(
+      context,
+      AppEnv.privacyPolicyUrl,
+      localizations.couldNotOpenPrivacyPolicy,
+    );
   }
 
-  void _launchFacebook() {
+  void _launchFacebook(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     const String url = 'https://www.facebook.com';
-    _launchURL(url, 'Could not open Facebook');
+    _launchURL(context, url, localizations.couldNotOpenFacebook);
   }
 
   // ====================== SHARE FUNCTIONALITY ======================
@@ -322,51 +360,60 @@ class SettingsScreen extends StatelessWidget {
     Share.share(AppEnv.shareAppUrl);
   }
 
-  void _showDisclaimerDialog() {
+  void _showDisclaimerDialog(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     Get.dialog(
       AlertDialog(
         backgroundColor: Colors.white,
         title: Text(
-          'Disclaimer'.tr,
+          localizations.disclaimer,
           style: const TextStyle(color: Colors.black),
         ),
         content: SingleChildScrollView(
           child: Text(
-            'Please get the permissions from the owner before reposting videos.\n Any unauthorized actions (re-uploading or downloading of contents) and/or violations of intellectual property\n rights is the sole responsibility of the user'
-                .tr,
+            localizations.disclaimerText,
             style: const TextStyle(color: Colors.black),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: Text('ok'.tr, style: const TextStyle(color: Colors.black)),
+            child: Text(
+              localizations.ok,
+              style: const TextStyle(color: Colors.black),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showAboutDialog() {
+  void _showAboutDialog(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     Get.dialog(
       AlertDialog(
-        title: Text('aboutApp'.tr),
+        title: Text(localizations.aboutApp),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.video_library, size: 60, color: Color(0xFF0066ff)),
             const SizedBox(height: 10),
             Text(
-              'appTitle'.tr,
+              localizations.appTitle,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Text('${'version'.tr} 1.0.0'),
+            Text('${localizations.version} 1.0.0'),
             const SizedBox(height: 15),
-            Text('appDescription'.tr, textAlign: TextAlign.center),
+            Text(localizations.appDescription, textAlign: TextAlign.center),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: Text('close'.tr)),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(localizations.close),
+          ),
         ],
       ),
     );

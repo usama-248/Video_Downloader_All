@@ -4,14 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:facebook_video_downloader/controllers/language_controller.dart';
+import 'package:facebook_video_downloader/features/home/home_screen.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 
 class LanguageSelectorScreen extends StatelessWidget {
   const LanguageSelectorScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // This is the correct way to get the controller
     final LanguageController controller = Get.find<LanguageController>();
+    final localizations = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -23,7 +25,7 @@ class LanguageSelectorScreen extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'Select Language'.tr,
+          localizations.selectLanguage,
           style: const TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
@@ -37,9 +39,50 @@ class LanguageSelectorScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
 
-            // English Option
+            // Earth Logo Center
+            Container(
+              height: 100,
+              width: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF0066ff).withOpacity(0.1),
+                    const Color(0xFF0066ff).withOpacity(0.05),
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0066ff).withOpacity(0.2),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.language,
+                  size: 60,
+                  color: const Color(0xFF0066ff),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Subtitle
+            Text(
+              localizations.chooseYourLanguage,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+
+            const SizedBox(height: 30),
+
+            // English Option with Emoji Flag
             _buildLanguageOption(
-              icon: Icons.g_translate,
+              flagEmoji: '🇺🇸',
               iconColor: Colors.blue,
               languageName: 'English',
               languageCode: 'en',
@@ -48,9 +91,9 @@ class LanguageSelectorScreen extends StatelessWidget {
             ),
             _buildDivider(),
 
-            // Urdu Option
+            // Urdu Option with Emoji Flag
             _buildLanguageOption(
-              icon: Icons.g_translate,
+              flagEmoji: '🇵🇰',
               iconColor: Colors.green,
               languageName: 'اردو',
               languageCode: 'ur',
@@ -59,9 +102,9 @@ class LanguageSelectorScreen extends StatelessWidget {
             ),
             _buildDivider(),
 
-            // Arabic Option
+            // Arabic Option with Emoji Flag
             _buildLanguageOption(
-              icon: Icons.g_translate,
+              flagEmoji: '🇸🇦',
               iconColor: Colors.red,
               languageName: 'العربية',
               languageCode: 'ar',
@@ -79,7 +122,7 @@ class LanguageSelectorScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () => _saveAndContinue(controller),
+                  onPressed: () => _saveAndContinue(controller, context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0066ff),
                     foregroundColor: Colors.white,
@@ -89,7 +132,7 @@ class LanguageSelectorScreen extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    'Continue'.tr,
+                    localizations.continueText,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -107,7 +150,7 @@ class LanguageSelectorScreen extends StatelessWidget {
   }
 
   Widget _buildLanguageOption({
-    required IconData icon,
+    required String flagEmoji,
     required Color iconColor,
     required String languageName,
     required String languageCode,
@@ -127,7 +170,9 @@ class LanguageSelectorScreen extends StatelessWidget {
                 color: iconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: iconColor, size: 28),
+              child: Center(
+                child: Text(flagEmoji, style: const TextStyle(fontSize: 28)),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -158,20 +203,26 @@ class LanguageSelectorScreen extends StatelessWidget {
     return const Divider(height: 0, thickness: 0.5, color: Colors.grey);
   }
 
-  Future<void> _saveAndContinue(LanguageController controller) async {
+  Future<void> _saveAndContinue(
+    LanguageController controller,
+    BuildContext context,
+  ) async {
+    final localizations = AppLocalizations.of(context)!;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_selected_language', true);
 
     Get.snackbar(
-      'Success'.tr,
-      '${controller.getCurrentLanguageName()} ${'languageSelected'.tr}',
+      localizations.success,
+      '${controller.getCurrentLanguageName()} ${localizations.languageSelected}',
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: const Color.fromARGB(255, 208, 219, 208),
+      backgroundColor: Colors.green,
       colorText: Colors.white,
       duration: const Duration(seconds: 2),
     );
 
     await Future.delayed(const Duration(milliseconds: 500));
-    Get.offAllNamed('/interest');
+
+    // 🔥 CHANGED: Go to Home Screen instead of Interest Screen
+    Get.offAll(() => const HomeScreen());
   }
 }

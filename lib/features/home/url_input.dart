@@ -1,15 +1,23 @@
+
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 
 class UrlInput extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSearch;
+  final VoidCallback? onPaste;
 
-  const UrlInput({Key? key, required this.controller, required this.onSearch})
-    : super(key: key);
+  const UrlInput({
+    Key? key, 
+    required this.controller, 
+    required this.onSearch,
+    this.onPaste,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -39,7 +47,7 @@ class UrlInput extends StatelessWidget {
                   child: TextField(
                     controller: controller,
                     decoration: InputDecoration(
-                      hintText: 'searchHint'.tr,
+                      hintText: localizations.searchHint,
                       hintStyle: TextStyle(color: Colors.grey.shade400),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
@@ -63,7 +71,7 @@ class UrlInput extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               OutlinedButton(
-                onPressed: onSearch,
+                onPressed: onPaste ?? onSearch,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF0066ff),
                   side: const BorderSide(color: Color(0xFF0066ff)),
@@ -75,7 +83,7 @@ class UrlInput extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: Text('paste_link'.tr),
+                child: Text(localizations.pasteLink),
               ),
             ],
           ),
@@ -94,7 +102,7 @@ class UrlInput extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                'download'.tr,
+                localizations.download,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

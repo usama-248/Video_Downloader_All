@@ -1,8 +1,12 @@
+
+
+// lib/features/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/controllers/home_controller.dart';
 import 'package:facebook_video_downloader/features/history/history_screen.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -10,7 +14,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(HomeController());
+    // Permanent controller to survive tab changes and rebuilds
+    final controller = Get.put(HomeController(), permanent: true);
+    final localizations = AppLocalizations.of(context)!;
 
     return Obx(() {
       if (controller.isLoading.value) {
@@ -20,10 +26,10 @@ class HomeScreen extends StatelessWidget {
       return Scaffold(
         body: IndexedStack(
           index: controller.currentIndex.value,
-          children: [
-            const _BrowserScreen(),
-            const _WatchScreenWithAd(),
-            const HistoryScreen(),
+          children: const [
+            _BrowserScreen(),
+            _WatchScreenWithAd(),
+            HistoryScreen(),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
@@ -39,21 +45,21 @@ class HomeScreen extends StatelessWidget {
                 AssetImage('assets/images/Home.png'),
                 size: 24,
               ),
-              label: 'Home'.tr,
+              label: localizations.home,
             ),
             BottomNavigationBarItem(
               icon: const ImageIcon(
                 AssetImage('assets/images/Watch_Video.png'),
                 size: 24,
               ),
-              label: 'Watch'.tr,
+              label: localizations.watch,
             ),
             BottomNavigationBarItem(
               icon: const ImageIcon(
                 AssetImage('assets/images/FileSave.png'),
                 size: 24,
               ),
-              label: 'Saved'.tr,
+              label: localizations.saved,
             ),
           ],
         ),
@@ -68,6 +74,8 @@ class _BrowserScreen extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -76,7 +84,7 @@ class _BrowserScreen extends GetView<HomeController> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'Video Downloader'.tr,
+            localizations.videoDownloader,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -90,17 +98,17 @@ class _BrowserScreen extends GetView<HomeController> {
             _buildIconButton(
               'assets/images/Crown.png',
               controller.goToPremium,
-              'premium'.tr,
+              localizations.premium,
             ),
           _buildIconButton(
             'assets/images/Facebookicon.png',
             () => controller.openInChrome('https://facebook.com'),
-            'facebook'.tr,
+            localizations.facebook,
           ),
           _buildIconButton(
             'assets/images/Settingicon.png',
             controller.goToSettings,
-            'settings'.tr,
+            localizations.settings,
           ),
           const SizedBox(width: 8),
         ],
@@ -120,10 +128,12 @@ class _BrowserScreen extends GetView<HomeController> {
               children: [
                 // Banner Ad
                 Obx(
-                  () =>
-                      controller.isBannerLoaded.value &&
+                  () => controller.isBannerLoaded.value &&
                           controller.bannerAd != null
                       ? Container(
+                          key: ValueKey(
+                            'banner_${controller.bannerAd!.hashCode}',
+                          ),
                           margin: const EdgeInsets.only(
                             top: 8,
                             left: 16,
@@ -135,17 +145,17 @@ class _BrowserScreen extends GetView<HomeController> {
                       : const SizedBox.shrink(),
                 ),
                 const SizedBox(height: 8),
-                _buildUrlInputSection(),
+                _buildUrlInputSection(context),
                 const SizedBox(height: 20),
                 Obx(
                   () => controller.showVideoPreview.value
-                      ? _buildVideoPreview()
-                      : _buildMrecAd(),
+                      ? _buildVideoPreview(context)
+                      : _buildMrecAd(context),
                 ),
                 const SizedBox(height: 16),
-                _buildInstructionsSection(),
+                _buildInstructionsSection(context),
                 const SizedBox(height: 16),
-                _buildTipSection(),
+                _buildTipSection(context),
                 const SizedBox(height: 20),
               ],
             ),
@@ -168,13 +178,17 @@ class _BrowserScreen extends GetView<HomeController> {
           errorBuilder: (_, __, ___) =>
               const Icon(Icons.star, color: Colors.white, size: 22),
         ),
-        onPressed: onTap,
+        onPressed: () {
+          if (Get.isRegistered<HomeController>()) onTap();
+        },
         tooltip: tooltip,
       ),
     );
   }
 
-  Widget _buildUrlInputSection() {
+  Widget _buildUrlInputSection(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -196,7 +210,7 @@ class _BrowserScreen extends GetView<HomeController> {
             child: TextField(
               controller: controller.urlController,
               decoration: InputDecoration(
-                hintText: 'Paste your video link here'.tr,
+                hintText: localizations.pasteYourVideoLinkHere,
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
@@ -218,7 +232,11 @@ class _BrowserScreen extends GetView<HomeController> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: controller.pasteLink,
+                  onPressed: () {
+                    if (Get.isRegistered<HomeController>()) {
+                      controller.pasteLink();
+                    }
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0066ff),
                     side: const BorderSide(color: Color(0xFF0066ff)),
@@ -226,7 +244,7 @@ class _BrowserScreen extends GetView<HomeController> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text('Paste Link'.tr),
+                  child: Text(localizations.pasteLink),
                 ),
               ),
               const SizedBox(width: 12),
@@ -248,7 +266,11 @@ class _BrowserScreen extends GetView<HomeController> {
                       ),
                       onPressed: controller.isFetching.value
                           ? null
-                          : controller.fetchVideo,
+                          : () {
+                              if (Get.isRegistered<HomeController>()) {
+                                controller.fetchVideo();
+                              }
+                            },
                       child: controller.isFetching.value
                           ? const SizedBox(
                               height: 20,
@@ -258,7 +280,7 @@ class _BrowserScreen extends GetView<HomeController> {
                                 color: Colors.white,
                               ),
                             )
-                          : Text('Fetch Video'),
+                          : Text(localizations.fetchVideo),
                     ),
                   ),
                 ),
@@ -270,7 +292,9 @@ class _BrowserScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildMrecAd() {
+  Widget _buildMrecAd(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Obx(
       () => Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -284,7 +308,10 @@ class _BrowserScreen extends GetView<HomeController> {
               border: Border.all(color: Colors.grey.shade800),
             ),
             child: controller.isMrecLoaded.value && controller.mrecAd != null
-                ? AdWidget(ad: controller.mrecAd!)
+                ? AdWidget(
+                    key: ValueKey('mrec_${controller.mrecAd!.hashCode}'),
+                    ad: controller.mrecAd!,
+                  )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -295,7 +322,7 @@ class _BrowserScreen extends GetView<HomeController> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Enter URL & tap Fetch Video',
+                        localizations.enterUrlAndTapFetchVideo,
                         style: TextStyle(
                           color: Colors.grey.shade500,
                           fontSize: 12,
@@ -309,7 +336,9 @@ class _BrowserScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildVideoPreview() {
+  Widget _buildVideoPreview(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Obx(
       () => Container(
         margin: const EdgeInsets.all(16),
@@ -348,9 +377,9 @@ class _BrowserScreen extends GetView<HomeController> {
                                   height: 200,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) =>
-                                      _defaultThumbnail(),
+                                      _defaultThumbnail(context),
                                 )
-                              : _defaultThumbnail(),
+                              : _defaultThumbnail(context),
                           Container(
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.3),
@@ -375,7 +404,7 @@ class _BrowserScreen extends GetView<HomeController> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          controller.videoTitle ?? 'video'.tr,
+                          controller.videoTitle ?? localizations.video,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -396,9 +425,13 @@ class _BrowserScreen extends GetView<HomeController> {
                     ),
                   ),
                   ElevatedButton.icon(
-                    onPressed: controller.navigateToWebView,
+                    onPressed: () {
+                      if (Get.isRegistered<HomeController>()) {
+                        controller.navigateToWebView();
+                      }
+                    },
                     icon: const Icon(Icons.download, size: 18),
-                    label: Text('Download'.tr),
+                    label: Text(localizations.download),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0066ff),
                       foregroundColor: Colors.white,
@@ -416,7 +449,9 @@ class _BrowserScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _defaultThumbnail() {
+  Widget _defaultThumbnail(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return SizedBox(
       height: 200,
       width: double.infinity,
@@ -433,7 +468,7 @@ class _BrowserScreen extends GetView<HomeController> {
               ),
               const SizedBox(height: 8),
               Text(
-                'video_ready'.tr,
+                localizations.videoReady,
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -443,7 +478,9 @@ class _BrowserScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildInstructionsSection() {
+  Widget _buildInstructionsSection(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -455,18 +492,15 @@ class _BrowserScreen extends GetView<HomeController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'How to Download'.tr,
+            localizations.howToDownload,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 12),
-          _buildStep('1', 'Open app and copy video link'.tr),
+          _buildStep('1', localizations.step1),
           const SizedBox(height: 8),
-          _buildStep(
-            '2',
-            'Paste the link in Fast Video Downloader and Fetch'.tr,
-          ),
+          _buildStep('2', localizations.step2),
           const SizedBox(height: 8),
-          _buildStep('3', 'Select download quality and start download'.tr),
+          _buildStep('3', localizations.step3),
         ],
       ),
     );
@@ -498,7 +532,9 @@ class _BrowserScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildTipSection() {
+  Widget _buildTipSection(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
@@ -513,7 +549,7 @@ class _BrowserScreen extends GetView<HomeController> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Try videos.com for more'.tr,
+                localizations.tryVideosCom,
                 style: const TextStyle(fontSize: 12, color: Colors.white),
               ),
             ),
@@ -530,6 +566,8 @@ class _WatchScreenWithAd extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -538,7 +576,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
         title: Align(
           alignment: Alignment.centerLeft,
           child: Text(
-            'Video Downloader'.tr,
+            localizations.videoDownloader,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -552,17 +590,17 @@ class _WatchScreenWithAd extends GetView<HomeController> {
             _buildIconButton(
               'assets/images/Crown.png',
               controller.goToPremium,
-              'premium'.tr,
+              localizations.premium,
             ),
           _buildIconButton(
             'assets/images/Facebookicon.png',
             controller.openFacebook,
-            'facebook'.tr,
+            localizations.facebook,
           ),
           _buildIconButton(
             'assets/images/Settingicon.png',
             controller.goToSettings,
-            'settings'.tr,
+            localizations.settings,
           ),
           const SizedBox(width: 8),
         ],
@@ -580,11 +618,14 @@ class _WatchScreenWithAd extends GetView<HomeController> {
           SingleChildScrollView(
             child: Column(
               children: [
+                // Watch Banner Ad
                 Obx(
-                  () =>
-                      controller.isWatchBannerLoaded.value &&
+                  () => controller.isWatchBannerLoaded.value &&
                           controller.watchBannerAd != null
                       ? Container(
+                          key: ValueKey(
+                            'watch_banner_${controller.watchBannerAd!.hashCode}',
+                          ),
                           margin: const EdgeInsets.only(
                             top: 8,
                             left: 16,
@@ -599,13 +640,13 @@ class _WatchScreenWithAd extends GetView<HomeController> {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      _buildHeroSection(),
+                      _buildHeroSection(context),
                       const SizedBox(height: 20),
-                      _buildHowToSection(),
+                      _buildHowToSection(context),
                       const SizedBox(height: 20),
-                      _buildProTipsSection(),
+                      _buildProTipsSection(context),
                       const SizedBox(height: 20),
-                      _buildHelpButton(),
+                      _buildHelpButton(context),
                     ],
                   ),
                 ),
@@ -630,13 +671,17 @@ class _WatchScreenWithAd extends GetView<HomeController> {
           errorBuilder: (_, __, ___) =>
               const Icon(Icons.star, color: Colors.white, size: 22),
         ),
-        onPressed: onTap,
+        onPressed: () {
+          if (Get.isRegistered<HomeController>()) onTap();
+        },
         tooltip: tooltip,
       ),
     );
   }
 
-  Widget _buildHeroSection() {
+  Widget _buildHeroSection(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -670,16 +715,11 @@ class _WatchScreenWithAd extends GetView<HomeController> {
               'assets/images/Watch_Video.png',
               width: 60,
               height: 60,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.play_circle_filled,
-                size: 60,
-                color: Color(0xFF0066ff),
-              ),
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            'Watch Videos'.tr,
+            localizations.watchVideos,
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -688,7 +728,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Tap Below to Open'.tr,
+            localizations.tapBelowToOpen,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 14, color: Colors.white70),
           ),
@@ -696,8 +736,12 @@ class _WatchScreenWithAd extends GetView<HomeController> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: controller.openFacebook,
-              label: Text('Open App'.tr, style: const TextStyle(fontSize: 16)),
+              onPressed: () {
+                if (Get.isRegistered<HomeController>())
+                  controller.openFacebook();
+              },
+              icon: const Icon(Icons.open_in_browser),
+              label: Text(localizations.openApp, style: const TextStyle(fontSize: 16)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF0066ff),
@@ -713,7 +757,9 @@ class _WatchScreenWithAd extends GetView<HomeController> {
     );
   }
 
-  Widget _buildHowToSection() {
+  Widget _buildHowToSection(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
@@ -754,7 +800,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'How to Download Videos'.tr,
+                    localizations.howToDownloadVideos,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -770,23 +816,22 @@ class _WatchScreenWithAd extends GetView<HomeController> {
             child: Column(
               children: [
                 _buildStepCard(
-                  'Find & Share',
-                  'Watch videos which u like'.tr,
+                  localizations.findAndShare,
+                  localizations.watchVideosYouLike,
                   Icons.looks_one,
                   const Color(0xFF1877F2),
                 ),
                 const SizedBox(height: 16),
                 _buildStepCard(
-                  'Copy Link',
-                  'Select "Copy Link" from the share options',
+                  localizations.copyLink,
+                  localizations.copyLinkDescription,
                   Icons.looks_two,
                   const Color(0xFF34A853),
                 ),
                 const SizedBox(height: 16),
                 _buildStepCard(
-                  'Paste & Download',
-                  'Paste the link in Fast Video Downloader Fetch and Download it'
-                      .tr,
+                  localizations.pasteAndDownload,
+                  localizations.pasteAndDownloadDescription,
                   Icons.looks_3,
                   const Color(0xFF0066ff),
                 ),
@@ -851,7 +896,9 @@ class _WatchScreenWithAd extends GetView<HomeController> {
     );
   }
 
-  Widget _buildProTipsSection() {
+  Widget _buildProTipsSection(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -876,10 +923,10 @@ class _WatchScreenWithAd extends GetView<HomeController> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Pro Tips for Best Results',
-                  style: TextStyle(
+                  localizations.proTips,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -889,11 +936,11 @@ class _WatchScreenWithAd extends GetView<HomeController> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildTipRow('🎯', 'Open app Choose Video which u like'.tr),
+          _buildTipRow('🎯', localizations.watchVideosYouLike),
           const SizedBox(height: 12),
-          _buildTipRow('📱', 'Make sure you have a stable internet connection'),
+          _buildTipRow('📱', localizations.tipStableInternet),
           const SizedBox(height: 12),
-          _buildTipRow('💾', 'Saved videos are stored in your gallery'),
+          _buildTipRow('💾', localizations.tipSavedVideos),
         ],
       ),
     );
@@ -914,22 +961,26 @@ class _WatchScreenWithAd extends GetView<HomeController> {
     );
   }
 
-  Widget _buildHelpButton() {
+  Widget _buildHelpButton(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: controller.showHelpGuide,
-        icon: const Icon(Icons.support_agent, color: Colors.transparent),
+        onPressed: () {
+          if (Get.isRegistered<HomeController>()) {
+            controller.showHelpGuide();
+          }
+        },
+        icon: const Icon(Icons.support_agent, color: Color(0xFF0066ff)),
         label: Text(
-          'need_help'.tr,
-          style: const TextStyle(fontSize: 14, color: Colors.transparent),
+          localizations.needHelp,
+          style: const TextStyle(fontSize: 14, color: Color(0xFF0066ff)),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.transparent),
+          side: const BorderSide(color: Color(0xFF0066ff)),
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );

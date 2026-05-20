@@ -1,17 +1,18 @@
-
-
 // ignore_for_file: invalid_null_aware_operator
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:facebook_video_downloader/features/home/home_screen.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 
 class PremiumScreen extends StatelessWidget {
   const PremiumScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       body: Stack(
@@ -48,7 +49,7 @@ class PremiumScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 Text(
-                  'START LIKE A PRO'.tr,
+                  localizations.premiumTitle,
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -57,8 +58,8 @@ class PremiumScreen extends StatelessWidget {
 
                 const SizedBox(height: 6),
 
-                Text( 
-                  'Unlock All Features'.tr,
+                Text(
+                  localizations.premiumSubtitle,
                   style: const TextStyle(fontSize: 15, color: Colors.grey),
                 ),
 
@@ -80,23 +81,41 @@ class PremiumScreen extends StatelessWidget {
                   child: Column(
                     children: [
                       _featureItem(
+                        context,
                         Icons.download,
-                        'Feature Unlimited'.tr,
+                        localizations.featureUnlimited,
                         true,
                       ),
-                      _featureItem(Icons.hd, 'Feature HD'.tr, true),
-                      _featureItem(Icons.flash_on, 'Feature Fast'.tr, false),
                       _featureItem(
+                        context,
+                        Icons.hd,
+                        localizations.featureHD,
+                        true,
+                      ),
+                      _featureItem(
+                        context,
+                        Icons.flash_on,
+                        localizations.featureFast,
+                        false,
+                      ),
+                      _featureItem(
+                        context,
                         Icons.trending_up,
-                        'Feature Trending'.tr,
+                        localizations.featureTrending,
                         true,
                       ),
                       _featureItem(
+                        context,
                         Icons.all_inclusive,
-                        'Feature Anything'.tr,
+                        localizations.featureAnything,
                         true,
                       ),
-                      _featureItem(Icons.block, 'Feature Ad-Free'.tr, false),
+                      _featureItem(
+                        context,
+                        Icons.block,
+                        localizations.featureAdFree,
+                        false,
+                      ),
                     ],
                   ),
                 ),
@@ -114,22 +133,22 @@ class PremiumScreen extends StatelessWidget {
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Weekly Premium",
-                            style: TextStyle(
+                            localizations.weeklyPremium,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            "Full Access",
-                            style: TextStyle(color: Colors.white70),
+                            localizations.fullAccess,
+                            style: const TextStyle(color: Colors.white70),
                           ),
                         ],
                       ),
@@ -137,16 +156,16 @@ class PremiumScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            "Rs 4,200",
-                            style: TextStyle(
+                            localizations.priceWeekly,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
-                            "Per week",
-                            style: TextStyle(color: Colors.white70),
+                            localizations.perWeek,
+                            style: const TextStyle(color: Colors.white70),
                           ),
                         ],
                       ),
@@ -166,7 +185,7 @@ class PremiumScreen extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'Free Trial Included'.tr,
+                      localizations.freeTrialIncluded,
                       style: const TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,
@@ -178,7 +197,7 @@ class PremiumScreen extends StatelessWidget {
                 const SizedBox(height: 15),
 
                 Text(
-                  'Disclaimer Content'.tr,
+                  localizations.disclaimerContent,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
@@ -187,7 +206,7 @@ class PremiumScreen extends StatelessWidget {
 
                 // 🚀 CTA BUTTON
                 GestureDetector(
-                  onTap: () => _startFreeTrial(),
+                  onTap: () => _startFreeTrial(context),
                   child: Container(
                     height: 58,
                     width: double.infinity,
@@ -205,7 +224,7 @@ class PremiumScreen extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        'Free Trial'.tr.toUpperCase(),
+                        localizations.freeTrialButton.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 17,
@@ -218,14 +237,14 @@ class PremiumScreen extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.verified, color: Colors.green, size: 20),
-                    SizedBox(width: 6),
+                    const Icon(Icons.verified, color: Colors.green, size: 20),
+                    const SizedBox(width: 6),
                     Text(
-                      "No Payment Now!",
-                      style: TextStyle(
+                      localizations.noPaymentNow,
+                      style: const TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.w600,
                       ),
@@ -243,7 +262,7 @@ class PremiumScreen extends StatelessWidget {
             top: 40,
             right: 16,
             child: GestureDetector(
-              onTap: () => _skipToHome(),
+              onTap: () => _skipToHome(context),
               child: Container(
                 padding: const EdgeInsets.all(8),
                 child: const Icon(
@@ -260,7 +279,7 @@ class PremiumScreen extends StatelessWidget {
   }
 
   // ================= FEATURE ITEM =================
-  Widget _featureItem(IconData icon, String text, bool available) {
+  Widget _featureItem(BuildContext context, IconData icon, String text, bool available) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
@@ -278,7 +297,7 @@ class PremiumScreen extends StatelessWidget {
   }
 
   // Skip to Home directly
-  Future<void> _skipToHome() async {
+  Future<void> _skipToHome(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_premium', true);
 
@@ -286,7 +305,9 @@ class PremiumScreen extends StatelessWidget {
   }
 
   // Start free trial and go to Home
-  Future<void> _startFreeTrial() async {
+  Future<void> _startFreeTrial(BuildContext context) async {
+    final localizations = AppLocalizations.of(context)!;
+    
     // Show loading dialog
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
@@ -303,8 +324,8 @@ class PremiumScreen extends StatelessWidget {
 
     // Show success message
     Get.snackbar(
-      'premiumActivated'.tr,
-      'premiumSuccessMessage'.tr,
+      localizations.premiumActivated,
+      localizations.premiumSuccessMessage,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.green,
       colorText: Colors.white,

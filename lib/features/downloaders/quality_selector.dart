@@ -1,10 +1,8 @@
-
-
 import 'package:facebook_video_downloader/controllers/quality_selector_controller.dart';
+import 'package:facebook_video_downloader/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/utils.dart';
-
 
 class QualitySelector extends StatelessWidget {
   final String videoUrl;
@@ -18,6 +16,8 @@ class QualitySelector extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+    
     // Initialize controller with parameters
     Get.put(QualitySelectorController(
       videoUrl: videoUrl,
@@ -42,9 +42,9 @@ class QualitySelector extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Select Video Quality',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    Text(
+                      localizations.selectVideoQuality,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -77,7 +77,7 @@ class QualitySelector extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text('Download Now'),
+                  child: Text(localizations.downloadNow),
                 ),
               ),
               const SizedBox(height: 16),

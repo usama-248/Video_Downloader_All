@@ -1,5 +1,3 @@
-
-
 // ignore_for_file: deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
 
 import 'package:get/get.dart';
