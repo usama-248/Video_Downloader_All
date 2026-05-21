@@ -1,7 +1,4 @@
 
-
-
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:developer' as developer;
@@ -88,13 +85,13 @@ class HistoryController extends GetxController {
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           isAdLoaded.value = true;
-          logBannerAdLoaded(); // Call analytics method
+          logBannerAdLoaded();
           developer.log('Banner ad loaded successfully', name: 'Ads');
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           isAdLoaded.value = false;
-          logBannerAdFailed(error.toString()); // Call analytics method
+          logBannerAdFailed(error.toString());
           developer.log('Banner ad failed: $error', name: 'Ads');
         },
       ),
@@ -491,7 +488,7 @@ class HistoryController extends GetxController {
     try {
       final previousCount = controller.downloadHistory.length;
       await logRefreshHistory(previousCount);
-      await controller.loadHistory();
+      await controller.fullRefreshHistory(); // Changed to fullRefreshHistory
 
       Get.snackbar(
         'Success',
@@ -569,7 +566,7 @@ class HistoryController extends GetxController {
           developer.log('Error deleting file: $e', name: 'File');
         }
 
-        await controller.loadHistory();
+        await controller.deleteHistoryItem(item['id'], item['filePath']);
 
         Get.snackbar(
           'Deleted',
@@ -644,7 +641,7 @@ class HistoryController extends GetxController {
           }
         }
 
-        await controller.loadHistory();
+        // await controller.deleteAllHistory();
 
         Get.snackbar(
           'Deleted',

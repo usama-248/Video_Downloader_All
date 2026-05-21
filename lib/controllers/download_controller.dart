@@ -381,6 +381,8 @@
 // // DOWNLOAD STATUS
 // enum DownloadStatus { downloading, completed, failed }
 
+// ignore_for_file: unused_local_variable
+
 import 'dart:io';
 import 'dart:math';
 
@@ -479,7 +481,7 @@ class DownloadController extends GetxController {
     }
   }
 
-  // LOAD HISTORY
+  // LOAD HISTORY (Full refresh - used by refresh button)
   Future<void> loadHistory() async {
     try {
       await _waitForDatabase();
@@ -491,13 +493,149 @@ class DownloadController extends GetxController {
 
       downloadHistory.assignAll(results);
 
-      debugPrint('📚 Loaded ${results.length} history items');
+      debugPrint('📚 Loaded ${results.length} history items (Full Refresh)');
     } catch (e) {
       debugPrint('❌ Load history error: $e');
     }
   }
 
-  // START DOWNLOAD
+  // FULL REFRESH HISTORY (Called by refresh button)
+  Future<void> fullRefreshHistory() async {
+    debugPrint('🔄 Manual full refresh triggered');
+    await loadHistory(); // This triggers full rebuild of UI
+  }
+
+  // ADD SINGLE ITEM TO HISTORY (For new downloads - selective update)
+  Future<void> addSingleToHistory({
+    required String fileName,
+    required String filePath,
+    required String videoUrl,
+    required String quality,
+    String? estimatedSize,
+    int? actualFileSizeBytes,
+  }) async {
+    try {
+      await _waitForDatabase();
+
+      String displaySizeStr;
+      int actualSize;
+      String? estimatedSizeStr = estimatedSize;
+
+      if (actualFileSizeBytes != null && actualFileSizeBytes > 0) {
+        actualSize = actualFileSizeBytes;
+        final actualSizeFormatted = _formatFileSize(actualFileSizeBytes);
+        displaySizeStr = estimatedSize ?? actualSizeFormatted;
+      } else {
+        final file = File(filePath);
+        if (await file.exists()) {
+          actualSize = await file.length();
+          final actualSizeFormatted = _formatFileSize(actualSize);
+          displaySizeStr = estimatedSize ?? actualSizeFormatted;
+        } else {
+          actualSize = 0;
+          displaySizeStr = estimatedSize ?? 'Unknown';
+        }
+      }
+
+      final id = await _database!.insert('downloads', {
+        'fileName': fileName,
+        'filePath': filePath,
+        'videoUrl': videoUrl,
+        'quality': quality,
+        'fileSize': displaySizeStr,
+        'actualFileSize': actualSize,
+        'estimatedSize': estimatedSizeStr,
+        'dateTime': DateTime.now().toIso8601String(),
+      });
+
+      // Create the new item with the ID
+      final newItem = {
+        'id': id,
+        'fileName': fileName,
+        'filePath': filePath,
+        'videoUrl': videoUrl,
+        'quality': quality,
+        'fileSize': displaySizeStr,
+        'actualFileSize': actualSize,
+        'estimatedSize': estimatedSizeStr,
+        'dateTime': DateTime.now().toIso8601String(),
+      };
+
+      // Add to the beginning of the list (most recent first)
+      downloadHistory.insert(0, newItem);
+
+      // This triggers a UI update but only for this new item
+      // because ListView.builder uses keys to identify items
+
+      debugPrint(
+        '✅ Added single item to history (Selective update): $fileName',
+      );
+    } catch (e) {
+      debugPrint('❌ Add single history error: $e');
+    }
+  }
+
+  // DELETE SINGLE ITEM (Selective update)
+  Future<void> deleteHistoryItem(int id, String filePath) async {
+    try {
+      await _downloadService.deleteVideo(filePath);
+      await _database!.delete('downloads', where: 'id = ?', whereArgs: [id]);
+
+      // Remove only the specific item from the list
+      downloadHistory.removeWhere((item) => item['id'] == id);
+
+      debugPrint('🗑️ Deleted single history item (Selective update): $id');
+    } catch (e) {
+      debugPrint('❌ Delete error: $e');
+    }
+  }
+
+  // DELETE MULTIPLE ITEMS (Batch delete)
+  Future<void> deleteMultipleHistoryItems(
+    List<int> ids,
+    List<String> filePaths,
+  ) async {
+    try {
+      // Delete files
+      for (var filePath in filePaths) {
+        await _downloadService.deleteVideo(filePath);
+      }
+
+      // Delete from database
+      for (var id in ids) {
+        await _database!.delete('downloads', where: 'id = ?', whereArgs: [id]);
+      }
+
+      // Remove all deleted items from the list
+      downloadHistory.removeWhere((item) => ids.contains(item['id']));
+
+      debugPrint('🗑️ Deleted ${ids.length} history items (Batch update)');
+    } catch (e) {
+      debugPrint('❌ Batch delete error: $e');
+    }
+  }
+
+  // CLEAR ALL HISTORY
+  Future<void> clearAllHistory() async {
+    try {
+      // Delete all files
+      for (var item in downloadHistory) {
+        await _downloadService.deleteVideo(item['filePath']);
+      }
+
+      // Clear database
+      await _database!.delete('downloads');
+
+      // Clear the observable list
+      downloadHistory.clear();
+
+      debugPrint('🗑️ Cleared all history');
+    } catch (e) {
+      debugPrint('❌ Clear history error: $e');
+    }
+  }
+
+  // START DOWNLOAD (Modified to use selective update)
   Future<void> startDownload({
     required String url,
     required String quality,
@@ -529,8 +667,6 @@ class DownloadController extends GetxController {
 
         if (index != -1 && total > 0) {
           activeDownloads[index].progress = received / total;
-
-          // IMPORTANT FOR GETX
           activeDownloads.refresh();
         }
       },
@@ -540,29 +676,25 @@ class DownloadController extends GetxController {
     if (savedPath != null) {
       try {
         final file = File(savedPath);
-
         final actualFileSizeBytes = await file.length();
-
         final actualSizeStr = _formatFileSize(actualFileSizeBytes);
-
         final displaySizeStr = estimatedSize ?? actualSizeStr;
 
-        await _database!.insert('downloads', {
-          'fileName': fileName,
-          'filePath': savedPath,
-          'videoUrl': url,
-          'quality': quality,
-          'fileSize': displaySizeStr,
-          'actualFileSize': actualFileSizeBytes,
-          'estimatedSize': estimatedSize,
-          'dateTime': DateTime.now().toIso8601String(),
-        });
-
-        await loadHistory();
+        // Use selective update instead of full reload
+        await addSingleToHistory(
+          fileName: fileName,
+          filePath: savedPath,
+          videoUrl: url,
+          quality: quality,
+          estimatedSize: estimatedSize,
+          actualFileSizeBytes: actualFileSizeBytes,
+        );
 
         activeDownloads.removeWhere((t) => t.id == taskId);
 
-        debugPrint('✅ Download completed and saved to history: $fileName');
+        debugPrint(
+          '✅ Download completed and added to history (Selective): $fileName',
+        );
       } catch (e) {
         debugPrint('❌ Save history error: $e');
       }
@@ -573,7 +705,6 @@ class DownloadController extends GetxController {
 
       if (index != -1) {
         activeDownloads[index].status = DownloadStatus.failed;
-
         activeDownloads.refresh();
       }
 
@@ -581,39 +712,7 @@ class DownloadController extends GetxController {
     }
   }
 
-  // DELETE SINGLE ITEM
-  Future<void> deleteHistoryItem(int id, String filePath) async {
-    try {
-      await _downloadService.deleteVideo(filePath);
-
-      await _database!.delete('downloads', where: 'id = ?', whereArgs: [id]);
-
-      await loadHistory();
-
-      debugPrint('🗑️ Deleted history item: $id');
-    } catch (e) {
-      debugPrint('❌ Delete error: $e');
-    }
-  }
-
-  // CLEAR ALL HISTORY
-  Future<void> clearAllHistory() async {
-    try {
-      for (var item in downloadHistory) {
-        await _downloadService.deleteVideo(item['filePath']);
-      }
-
-      await _database!.delete('downloads');
-
-      downloadHistory.clear();
-
-      debugPrint('🗑️ Cleared all history');
-    } catch (e) {
-      debugPrint('❌ Clear history error: $e');
-    }
-  }
-
-  // ADD TO HISTORY
+  // ADD TO HISTORY (Legacy method - kept for compatibility)
   Future<void> addToHistory({
     required String fileName,
     required String filePath,
@@ -622,54 +721,15 @@ class DownloadController extends GetxController {
     String? estimatedSize,
     int? actualFileSizeBytes,
   }) async {
-    try {
-      await _waitForDatabase();
-
-      String displaySizeStr;
-
-      int actualSize;
-
-      String? estimatedSizeStr = estimatedSize;
-
-      if (actualFileSizeBytes != null && actualFileSizeBytes > 0) {
-        actualSize = actualFileSizeBytes;
-
-        final actualSizeFormatted = _formatFileSize(actualFileSizeBytes);
-
-        displaySizeStr = estimatedSize ?? actualSizeFormatted;
-      } else {
-        final file = File(filePath);
-
-        if (await file.exists()) {
-          actualSize = await file.length();
-
-          final actualSizeFormatted = _formatFileSize(actualSize);
-
-          displaySizeStr = estimatedSize ?? actualSizeFormatted;
-        } else {
-          actualSize = 0;
-
-          displaySizeStr = estimatedSize ?? 'Unknown';
-        }
-      }
-
-      await _database!.insert('downloads', {
-        'fileName': fileName,
-        'filePath': filePath,
-        'videoUrl': videoUrl,
-        'quality': quality,
-        'fileSize': displaySizeStr,
-        'actualFileSize': actualSize,
-        'estimatedSize': estimatedSizeStr,
-        'dateTime': DateTime.now().toIso8601String(),
-      });
-
-      await loadHistory();
-
-      debugPrint('✅ Added to history: $fileName');
-    } catch (e) {
-      debugPrint('❌ Add history error: $e');
-    }
+    // Use the selective update method
+    await addSingleToHistory(
+      fileName: fileName,
+      filePath: filePath,
+      videoUrl: videoUrl,
+      quality: quality,
+      estimatedSize: estimatedSize,
+      actualFileSizeBytes: actualFileSizeBytes,
+    );
   }
 
   // UPDATE SIZE
@@ -696,9 +756,17 @@ class DownloadController extends GetxController {
         whereArgs: [id],
       );
 
-      await loadHistory();
+      // Find and update the specific item in the list
+      final index = downloadHistory.indexWhere((item) => item['id'] == id);
+      if (index != -1) {
+        downloadHistory[index]['actualFileSize'] = actualFileSizeBytes;
+        if (estimatedSize == null) {
+          downloadHistory[index]['fileSize'] = actualSizeStr;
+        }
+        downloadHistory.refresh(); // Refresh the list to update UI
+      }
 
-      debugPrint('✅ Updated history item');
+      debugPrint('✅ Updated history item (Selective): $id');
     } catch (e) {
       debugPrint('❌ Update history error: $e');
     }
@@ -711,7 +779,6 @@ class DownloadController extends GetxController {
 
       if (await file.exists()) {
         final size = await file.length();
-
         return _formatFileSize(size);
       }
     } catch (e) {
@@ -724,16 +791,13 @@ class DownloadController extends GetxController {
   // DISPLAY SIZE
   String getDisplaySizeForHistoryItem(Map<String, dynamic> item) {
     final estimatedSize = item['estimatedSize'] as String?;
-
     final actualFileSize = item['actualFileSize'] as int?;
 
     if (estimatedSize != null && actualFileSize != null) {
       final actualSizeStr = _formatFileSize(actualFileSize);
-
       if (estimatedSize != actualSizeStr) {
         return '$estimatedSize (Actual: $actualSizeStr)';
       }
-
       return estimatedSize;
     }
 
@@ -747,6 +811,7 @@ class DownloadController extends GetxController {
     const suffixes = ['B', 'KB', 'MB', 'GB'];
 
     var i = (log(bytes) / log(1024)).floor();
+    if (i >= suffixes.length) i = suffixes.length - 1;
 
     return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
   }

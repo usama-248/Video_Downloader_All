@@ -341,3 +341,6 @@ class PremiumScreen extends StatelessWidget {
     Get.offAll(() => const HomeScreen());
   }
 }
+
+
+

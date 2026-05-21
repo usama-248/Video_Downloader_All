@@ -1,6 +1,5 @@
-//ignore_for_file: unused_element
 
-import 'dart:io';
+// lib/features/history/history_screen.dart (Updated version with full refresh)
 
 import 'package:facebook_video_downloader/controllers/history_controller.dart';
 import 'package:facebook_video_downloader/core/config/app_env.dart';
@@ -9,13 +8,12 @@ import 'package:facebook_video_downloader/core/config/app_features.dart';
 import 'package:facebook_video_downloader/features/premium/premium_screen.dart';
 import 'package:facebook_video_downloader/features/settings/settings_screen.dart';
 import 'package:facebook_video_downloader/l10n/app_localizations.dart';
+import 'package:facebook_video_downloader/widgets/history_item_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:facebook_video_downloader/core/config/admob_config.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -38,6 +36,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   final Set<int> _deletingItems = {};
   int _currentBottomNavIndex = 2;
+  
+  // Add this for refresh state
+  bool _isRefreshing = false;
 
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
@@ -153,21 +154,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Future<String?> _getThumbnail(String videoPath, String fileName) async {
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final thumbnail = await VideoThumbnail.thumbnailFile(
-        video: videoPath,
-        thumbnailPath: tempDir.path,
-        imageFormat: ImageFormat.JPEG,
-        quality: 75,
-      );
-      return thumbnail;
-    } catch (e) {
-      return null;
-    }
-  }
-
   String _formatDate(BuildContext context, String dateTimeStr) {
     final localizations = AppLocalizations.of(context)!;
 
@@ -207,17 +193,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  // UPDATED: Refresh with loading state and circular indicators
   Future<void> _refreshHistory(BuildContext context) async {
     final localizations = AppLocalizations.of(context)!;
-    final previousCount = controller.downloadHistory.length;
-    await analyticsController.logRefreshHistory(previousCount);
-    await controller.loadHistory();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(localizations.historyRefreshed),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    
+    // Show refreshing state
+    setState(() {
+      _isRefreshing = true;
+    });
+    
+    try {
+      final previousCount = controller.downloadHistory.length;
+      await analyticsController.logRefreshHistory(previousCount);
+      
+      // This will trigger full rebuild of ALL widgets
+      await controller.fullRefreshHistory();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(localizations.historyRefreshed),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshing = false;
+        });
+      }
+    }
   }
 
   Future<void> _playVideo(
@@ -257,9 +272,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() {
       _deletingItems.remove(itemId);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item['fileName']} ${localizations.deleted}')),
-    );
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${item['fileName']} ${localizations.deleted}')),
+      );
+    }
   }
 
   void _goToPremium(BuildContext context) async {
@@ -296,7 +314,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final localizations = AppLocalizations.of(context)!;
 
     // Track empty history if needed
-    if (controller.downloadHistory.isEmpty) {
+    if (controller.downloadHistory.isEmpty && !_isRefreshing) {
       analyticsController.onEmptyHistoryShown();
     }
 
@@ -361,7 +379,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
               tooltip: localizations.facebook,
             ),
           ),
-          // Settings Button
           SizedBox(
             width: 40,
             height: 40,
@@ -439,6 +456,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final localizations = AppLocalizations.of(context)!;
     final history = controller.downloadHistory;
 
+    // Show loading indicator while refreshing
+    if (_isRefreshing) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Refreshing history...',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (history.isEmpty) {
       return Center(
         child: Column(
@@ -475,9 +511,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => _refreshHistory(context),
-              child: Text(
+            child: TextButton.icon(
+              onPressed: _isRefreshing ? null : () => _refreshHistory(context),
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.refresh, color: Colors.white, size: 18),
+              label: Text(
                 localizations.refresh,
                 style: const TextStyle(
                   color: Colors.white,
@@ -488,167 +534,67 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            itemCount: history.length,
-            itemBuilder: (context, index) {
-              final item = history[index];
-              final itemId = item['id'] as int;
+          child: RefreshIndicator(
+            onRefresh: () => _refreshHistory(context),
+            color: Colors.white,
+            backgroundColor: const Color(0xFF0066ff),
+            child: ListView.builder(
+              key: const PageStorageKey('history_list'),
+              itemCount: history.length,
+              itemBuilder: (context, index) {
+                final item = history[index];
+                final itemId = item['id'] as int;
 
-              if (_deletingItems.contains(itemId)) {
-                return const SizedBox.shrink();
-              }
+                if (_deletingItems.contains(itemId)) {
+                  return const SizedBox.shrink();
+                }
 
-              return Dismissible(
-                key: Key(itemId.toString()),
-                direction: DismissDirection.horizontal,
-                confirmDismiss: (direction) async {
-                  final shouldDelete = await _showDeleteConfirmationDialog(
-                    context,
-                    item,
-                  );
-                  if (shouldDelete == true) {
-                    await _deleteVideo(context, item, itemId);
-                  }
-                  return shouldDelete;
-                },
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 20),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-                secondaryBackground: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-                child: Card(
-                  margin: const EdgeInsets.all(8),
-                  color: Colors.white,
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    leading: FutureBuilder<String?>(
-                      future: _getThumbnail(
-                        item['filePath'],
-                        item['fileName'].toString(),
-                      ),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey[200],
-                            ),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        if (snapshot.hasData && snapshot.data != null) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(snapshot.data!),
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: Colors.grey[200],
-                                  ),
-                                  child: const Icon(
-                                    Icons.broken_image,
-                                    color: Colors.grey,
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        }
-                        return Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                          ),
-                          child: const Icon(
-                            Icons.video_file,
-                            size: 30,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
+                return Dismissible(
+                  key: Key('history_item_${itemId}_${item['filePath']}'),
+                  direction: DismissDirection.horizontal,
+                  confirmDismiss: (direction) async {
+                    final shouldDelete = await _showDeleteConfirmationDialog(
+                      context,
+                      item,
+                    );
+                    if (shouldDelete == true) {
+                      await _deleteVideo(context, item, itemId);
+                    }
+                    return shouldDelete;
+                  },
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.only(left: 20),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 30,
                     ),
-                    title: Text(
-                      item['fileName'],
-                      maxLines: 1,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${localizations.quality}: ${item['quality']} | ${localizations.size}: ${item['fileSize']}',
-                          style: const TextStyle(color: Colors.black54),
-                        ),
-                        Text(
-                          _formatDate(context, item['dateTime']),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black45,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.play_arrow,
-                        color: Color.fromARGB(255, 48, 172, 85),
-                      ),
-                      onPressed: () => _playVideo(context, item, index),
-                    ),
-                    onLongPress: () async {
-                      final shouldDelete = await _showDeleteConfirmationDialog(
-                        context,
-                        item,
-                      );
-                      if (shouldDelete == true) {
-                        await _deleteVideo(context, item, itemId);
-                      }
-                    },
                   ),
-                ),
-              );
-            },
+                  secondaryBackground: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                  child: HistoryItemWidget(
+                    item: item,
+                    index: index,
+                    onPlay: () => _playVideo(context, item, index),
+                    onDeleteConfirm: () => _showDeleteConfirmationDialog(context, item),
+                    onDelete: () => _deleteVideo(context, item, itemId),
+                    formatDate: () => _formatDate(context, item['dateTime']),
+                    // Pass refresh state to force thumbnail reload
+                    forceReload: _isRefreshing,
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],

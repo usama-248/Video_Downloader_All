@@ -1,5 +1,3 @@
-
-
 // ignore_for_file: avoid_print, unnecessary_underscores, deprecated_member_use
 
 import 'package:facebook_video_downloader/core/services/screen_time_tracker.dart';
@@ -1263,3 +1261,10 @@ class HomeController extends GetxController {
   String? get thumbnailUrl => imageUrl.value;
   String? get videoTitle => title.value;
 }
+
+
+
+
+
+
+
