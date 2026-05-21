@@ -1,3 +1,5 @@
+
+
 // ignore_for_file: deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
 
 import 'package:get/get.dart';
@@ -14,7 +16,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:gal/gal.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:facebook_video_downloader/core/config/app_env.dart';
 import 'package:facebook_video_downloader/controllers/download_controller.dart';
 import 'package:facebook_video_downloader/core/config/admob_config.dart';
 
@@ -50,6 +51,13 @@ class WebViewControllerr extends GetxController {
   var downloadIsAudio = false.obs;
   var downloadProgressIsLowQuality = false.obs;
 
+  // New progress tracking variables
+  var animatedProgress = 0.0.obs;
+  var etaTime = ''.obs;
+  var downloadedSize = '0 MB'.obs;
+  var totalSize = '0 MB'.obs;
+  var downloadPercentage = 0.obs;
+
   late WebViewController webController;
   String? _pendingFilePath;
   String? _pendingFileName;
@@ -67,8 +75,16 @@ class WebViewControllerr extends GetxController {
   DateTime? _lastSpeedCalcTime;
   int _lastSpeedCalcBytes = 0;
   Timer? _speedTimer;
+  Timer? _animationTimer;
 
   final String url;
+
+  // Store all captured video URLs
+  final Set<String> _capturedVideoUrls = {};
+  Timer? _captureTimer;
+
+  // Track if we're showing download UI
+  var isShowingDownloadPopup = false.obs;
 
   WebViewControllerr({required this.url});
 
@@ -84,6 +100,8 @@ class WebViewControllerr extends GetxController {
   @override
   void onClose() {
     _speedTimer?.cancel();
+    _animationTimer?.cancel();
+    _captureTimer?.cancel();
     _rewardedAd?.dispose();
     _interstitialAdForDownload?.dispose();
     super.onClose();
@@ -127,28 +145,124 @@ class WebViewControllerr extends GetxController {
           onPageFinished: (String url) {
             isLoading.value = false;
             _injectJS();
-            Future.delayed(const Duration(milliseconds: 1500), () {
+
+            // Start capturing network requests
+            _startNetworkCapture();
+
+            Future.delayed(const Duration(milliseconds: 2000), () {
               if (detectedVideoUrl.value != null &&
                   showAutoPopup.value &&
-                  !isDownloading.value) {
+                  !isDownloading.value &&
+                  !isShowingDownloadPopup.value) {
                 _showDownloadOptionsPopup();
               }
             });
           },
           onWebResourceError: (WebResourceError error) {
+            // Don't show error for unsupported schemes
+            if (error.errorCode == -2 || // ERR_UNKNOWN_URL_SCHEME
+                error.description.contains('ERR_UNKNOWN_URL_SCHEME')) {
+              // Silently ignore - don't show error message
+              return;
+            }
             isLoading.value = false;
-            errorMessage.value = 'Failed to load page';
+            // Don't set error message for navigation errors
+            if (!error.description.contains('URL scheme')) {
+              errorMessage.value = 'Failed to load page';
+            }
           },
           onNavigationRequest: (NavigationRequest request) {
-            if (request.url.startsWith('intent://') ||
-                request.url.startsWith('fb://')) {
+            final url = request.url;
+
+            // Block unsupported URL schemes
+            if (url.startsWith('fb://') ||
+                url.startsWith('intent://') ||
+                url.startsWith('tel:') ||
+                url.startsWith('sms:') ||
+                url.startsWith('mailto:')) {
+              // Just prevent navigation without showing any error
               return NavigationDecision.prevent;
             }
+
+            // Capture video URLs from navigation
+            _checkUrlForVideo(url);
             return NavigationDecision.navigate;
           },
         ),
       );
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadUrl());
+  }
+
+  void _startNetworkCapture() {
+    // Periodically scan the page for video elements
+    _captureTimer?.cancel();
+    _captureTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
+      if (!isLoading.value && !isDownloading.value) {
+        _scanForVideos();
+      }
+    });
+  }
+
+  void _scanForVideos() {
+    webController.runJavaScript('''
+      (function() {
+        const videos = [];
+        
+        // Find all video elements
+        document.querySelectorAll('video').forEach(video => {
+          if (video.src && video.src.startsWith('http')) {
+            videos.push(video.src);
+          }
+          video.querySelectorAll('source').forEach(source => {
+            if (source.src && source.src.startsWith('http')) {
+              videos.push(source.src);
+            }
+          });
+        });
+        
+        // Find video URLs in iframes
+        document.querySelectorAll('iframe').forEach(iframe => {
+          if (iframe.src && (iframe.src.includes('.mp4') || iframe.src.includes('video'))) {
+            videos.push(iframe.src);
+          }
+        });
+        
+        // Find data attributes
+        document.querySelectorAll('[data-video-url], [data-hd-url], [data-sd-url], [data-video]').forEach(el => {
+          const url = el.getAttribute('data-video-url') || 
+                     el.getAttribute('data-hd-url') || 
+                     el.getAttribute('data-sd-url') ||
+                     el.getAttribute('data-video');
+          if (url && url.startsWith('http')) {
+            videos.push(url);
+          }
+        });
+        
+        if (videos.length > 0 && videos[0]) {
+          VideoChannel.postMessage(videos[0]);
+        }
+      })();
+    ''');
+  }
+
+  void _checkUrlForVideo(String url) {
+    // Check if URL is a video file - ignore fb:// and other schemes
+    if (!url.startsWith('http') && !url.startsWith('https')) {
+      return;
+    }
+
+    final lowerUrl = url.toLowerCase();
+    if (lowerUrl.contains('.mp4') ||
+        lowerUrl.contains('.m3u8') ||
+        lowerUrl.contains('/video/') ||
+        lowerUrl.contains('/reel/') ||
+        lowerUrl.contains('/watch')) {
+      if (!_capturedVideoUrls.contains(url)) {
+        _capturedVideoUrls.add(url);
+        _onVideoDetected(url);
+      }
+    }
   }
 
   void _resetFileSizes() {
@@ -172,74 +286,83 @@ class WebViewControllerr extends GetxController {
       await webController.loadRequest(uri);
     } catch (e) {
       isLoading.value = false;
-      errorMessage.value = 'Error loading: $url';
-      Get.snackbar('Error', 'Failed to load: $url');
+      // Don't show error for URL scheme issues
+      if (!e.toString().contains('URL scheme')) {
+        errorMessage.value = 'Error loading: $url';
+      }
     }
   }
 
   void _injectJS() {
     webController.runJavaScript('''
-      function findVideoUrls() {
+      // Enhanced video detection
+      function findAllVideoUrls() {
         const urls = [];
+        
+        // Check all video elements
         const videos = document.querySelectorAll('video');
         for (const video of videos) {
           if (video.src && video.src.startsWith('http')) {
             urls.push(video.src);
-            VideoChannel.postMessage(video.src);
+          }
+          if (video.currentSrc && video.currentSrc.startsWith('http')) {
+            urls.push(video.currentSrc);
           }
           const sources = video.querySelectorAll('source');
           for (const source of sources) {
             if (source.src && source.src.startsWith('http')) {
               urls.push(source.src);
-              VideoChannel.postMessage(source.src);
             }
           }
         }
-        const iframes = document.querySelectorAll('iframe');
-        for (const iframe of iframes) {
-          if (iframe.src && (iframe.src.includes('.mp4') || iframe.src.includes('video'))) {
-            urls.push(iframe.src);
-            VideoChannel.postMessage(iframe.src);
+        
+        // Check meta tags
+        const metaTags = document.querySelectorAll('meta[property="og:video"], meta[property="og:video:url"], meta[name="twitter:player:stream"]');
+        for (const meta of metaTags) {
+          const content = meta.getAttribute('content');
+          if (content && content.startsWith('http')) {
+            urls.push(content);
           }
         }
-        const allElements = document.querySelectorAll('[src*=".mp4"], [data-video-url], [data-hd-url], [data-sd-url]');
-        for (const element of allElements) {
-          const src = element.getAttribute('src');
-          const dataVideoUrl = element.getAttribute('data-video-url');
-          const dataHdUrl = element.getAttribute('data-hd-url');
-          const dataSdUrl = element.getAttribute('data-sd-url');
-          if (src && src.includes('.mp4') && src.startsWith('http')) {
-            urls.push(src);
-            VideoChannel.postMessage(src);
-          }
-          if (dataVideoUrl && dataVideoUrl.startsWith('http')) {
-            urls.push(dataVideoUrl);
-            VideoChannel.postMessage(dataVideoUrl);
-          }
-          if (dataHdUrl && dataHdUrl.startsWith('http')) {
-            urls.push(dataHdUrl);
-            VideoChannel.postMessage(dataHdUrl);
-          }
-          if (dataSdUrl && dataSdUrl.startsWith('http')) {
-            urls.push(dataSdUrl);
-            VideoChannel.postMessage(dataSdUrl);
-          }
+        
+        if (urls.length > 0 && urls[0]) {
+          VideoChannel.postMessage(urls[0]);
         }
-        return urls.length;
       }
-      findVideoUrls();
-      setInterval(findVideoUrls, 3000);
+      
+      findAllVideoUrls();
+      
+      // Run every 2 seconds
+      setInterval(findAllVideoUrls, 2000);
     ''');
   }
 
   void _onVideoDetected(String url) {
+    // Filter out non-video URLs
+    if (!url.contains('.mp4') &&
+        !url.contains('video') &&
+        !url.contains('reel') &&
+        !url.contains('watch')) {
+      return;
+    }
+
     if (detectedVideoUrl.value == url) return;
+
+    print('Video detected: $url');
     detectedVideoUrl.value = url;
     isVideoDetected.value = true;
+
+    // Fetch file sizes
     _fetchFileSizes(url);
-    Future.delayed(const Duration(seconds: 5), () {
-      if (isVideoDetected.value && !isDownloading.value) {
-        isVideoDetected.value = false;
+
+    // Auto show popup if enabled and not already showing
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (isVideoDetected.value &&
+          detectedVideoUrl.value != null &&
+          showAutoPopup.value &&
+          !isDownloading.value &&
+          !isShowingDownloadPopup.value) {
+        _showDownloadOptionsPopup();
       }
     });
   }
@@ -254,19 +377,21 @@ class WebViewControllerr extends GetxController {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
-        'Referer': AppEnv.facebookReferer,
       };
+
       try {
         final response = await dio.head(videoUrl);
         final contentLength = response.headers.value('content-length');
         if (contentLength != null) {
           final bytes = int.parse(contentLength);
+          totalSize.value = _formatFileSize(bytes);
           final estimatedDurationSeconds = bytes / 437500;
           size1080p.value = _formatFileSize(bytes);
           size720p.value = _formatFileSize((bytes * 0.7).round());
           size480p.value = _formatFileSize((bytes * 0.45).round());
           size360p.value = _formatFileSize((bytes * 0.3).round());
           size144p.value = _formatFileSize((bytes * 0.12).round());
+
           final audioSize128Bytes = (estimatedDurationSeconds * 128 * 1024 / 8)
               .round();
           final audioSize320Bytes = (estimatedDurationSeconds * 320 * 1024 / 8)
@@ -457,6 +582,7 @@ class WebViewControllerr extends GetxController {
   }) {
     isDownloading.value = true;
     downloadProgress.value = 0.0;
+    animatedProgress.value = 0.0;
     downloadQualityLabel.value = qualityLabel;
     downloadIsAudio.value = isAudio;
     downloadProgressIsLowQuality.value = isLowQuality && !isAudio;
@@ -465,6 +591,29 @@ class WebViewControllerr extends GetxController {
     actualTotalBytes.value = 0;
     totalKnown.value = false;
     downloadSpeed.value = '0 KB/s';
+    etaTime.value = '';
+    downloadedSize.value = '0 MB';
+    downloadPercentage.value = 0;
+    downloadStatus.value = 'Starting download...';
+
+    // Start smooth animation
+    _startAnimationTimer();
+  }
+
+  void _startAnimationTimer() {
+    _animationTimer?.cancel();
+    _animationTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (animatedProgress.value < downloadProgress.value) {
+        animatedProgress.value += 0.02;
+        if (animatedProgress.value > downloadProgress.value) {
+          animatedProgress.value = downloadProgress.value;
+        }
+        downloadPercentage.value = (animatedProgress.value * 100).round();
+      } else if (animatedProgress.value > downloadProgress.value) {
+        animatedProgress.value = downloadProgress.value;
+        downloadPercentage.value = (animatedProgress.value * 100).round();
+      }
+    });
   }
 
   void _startSpeedTimer() {
@@ -487,6 +636,25 @@ class WebViewControllerr extends GetxController {
               '${(speedBytesPerSec / (1024 * 1024)).toStringAsFixed(1)} MB/s';
         }
         downloadSpeed.value = speedStr;
+
+        // Calculate ETA
+        if (totalKnown.value && speedBytesPerSec > 0) {
+          final remainingBytes = actualTotalBytes.value - receivedBytes.value;
+          final remainingSeconds = remainingBytes / speedBytesPerSec;
+          if (remainingSeconds > 0) {
+            final minutes = (remainingSeconds / 60).floor();
+            final seconds = (remainingSeconds % 60).floor();
+            if (minutes > 0) {
+              etaTime.value = '$minutes min ${seconds}s left';
+            } else {
+              etaTime.value = '${seconds}s left';
+            }
+            downloadStatus.value = etaTime.value;
+          }
+        }
+
+        // Update downloaded size
+        downloadedSize.value = _formatFileSize(receivedBytes.value);
       }
       _lastSpeedCalcTime = now;
       _lastSpeedCalcBytes = receivedBytes.value;
@@ -496,6 +664,8 @@ class WebViewControllerr extends GetxController {
   void _stopSpeedTimer() {
     _speedTimer?.cancel();
     _speedTimer = null;
+    _animationTimer?.cancel();
+    _animationTimer = null;
   }
 
   void _updateProgress(int received, int total) {
@@ -503,28 +673,37 @@ class WebViewControllerr extends GetxController {
     if (total > 0 && total != -1) {
       actualTotalBytes.value = total;
       totalKnown.value = true;
-      downloadProgress.value = (received / total).clamp(0.0, 1.0);
+      final newProgress = (received / total).clamp(0.0, 1.0);
+      downloadProgress.value = newProgress;
+
       String statusText = '';
-      final remaining = actualTotalBytes.value - receivedBytes.value;
-      if (remaining > 0 &&
-          downloadSpeed.value != '0 KB/s' &&
-          downloadSpeed.value != '0 B/s') {
-        final speedBytes = _parseSpeedToBytes(downloadSpeed.value);
-        if (speedBytes > 0) {
-          final remainingSecs = remaining / speedBytes;
-          final mins = (remainingSecs / 60).floor();
-          final secs = (remainingSecs % 60).floor();
-          if (mins > 0) {
-            statusText = '${mins}m ${secs}s left';
-          } else {
-            statusText = '${secs}s left';
+      if (etaTime.value.isNotEmpty && etaTime.value != 'Starting download...') {
+        statusText = etaTime.value;
+      } else {
+        final remaining = actualTotalBytes.value - receivedBytes.value;
+        if (remaining > 0 &&
+            downloadSpeed.value != '0 KB/s' &&
+            downloadSpeed.value != '0 B/s') {
+          final speedBytes = _parseSpeedToBytes(downloadSpeed.value);
+          if (speedBytes > 0) {
+            final remainingSecs = remaining / speedBytes;
+            final mins = (remainingSecs / 60).floor();
+            final secs = (remainingSecs % 60).floor();
+            if (mins > 0) {
+              statusText = '${mins}m ${secs}s left';
+            } else {
+              statusText = '${secs}s left';
+            }
+            downloadStatus.value = statusText;
           }
         }
       }
-      downloadStatus.value = statusText;
     } else {
       totalKnown.value = false;
-      downloadStatus.value = 'Downloading...';
+      if (downloadStatus.value.isEmpty ||
+          downloadStatus.value == 'Starting download...') {
+        downloadStatus.value = 'Downloading...';
+      }
     }
   }
 
@@ -600,13 +779,14 @@ class WebViewControllerr extends GetxController {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
-        'Referer': AppEnv.facebookReferer,
       };
+
       final tempDir = await getTemporaryDirectory();
       final tempVideoPath = path.join(
         tempDir.path,
         'vd_audio_src_${DateTime.now().millisecondsSinceEpoch}.mp4',
       );
+
       await dio.download(
         url,
         tempVideoPath,
@@ -614,7 +794,9 @@ class WebViewControllerr extends GetxController {
           _updateProgress(received, total);
         },
       );
+
       downloadProgress.value = 0.0;
+      animatedProgress.value = 0.0;
       totalKnown.value = false;
       downloadStatus.value = 'Converting to MP3...';
 
@@ -686,14 +868,18 @@ class WebViewControllerr extends GetxController {
         'video_${DateTime.now().millisecondsSinceEpoch}_$quality.mp4';
     try {
       String videoUrl = detectedVideoUrl.value!;
+
+      // Try to find quality-specific version
       final qualityUrl = await _findQualityVideo(quality);
-      if (qualityUrl.isNotEmpty && qualityUrl.startsWith('http')) {
+      if (qualityUrl != null &&
+          qualityUrl.isNotEmpty &&
+          qualityUrl.startsWith('http')) {
         videoUrl = qualityUrl;
         downloadStatus.value = '$quality version found! Downloading...';
       } else {
-        downloadStatus.value =
-            '$quality not available, downloading best available...';
+        downloadStatus.value = 'Downloading best available quality...';
       }
+
       final savePath = await _downloadFile(
         videoUrl,
         fileName,
@@ -715,15 +901,15 @@ class WebViewControllerr extends GetxController {
     }
   }
 
-  Future<String> _findQualityVideo(String quality) async {
-    String bestUrl = '';
+  Future<String?> _findQualityVideo(String quality) async {
     try {
       final qualityNum = quality.replaceAll('p', '');
-      final jsResult = await webController.runJavaScriptReturningResult('''
+      final result = await webController.runJavaScriptReturningResult('''
         (function() {
           let bestMatchUrl = '';
           let qualityScore = 0;
           const targetQuality = $qualityNum;
+          
           const videos = document.querySelectorAll('video');
           for (const video of videos) {
             if (video.src && video.src.startsWith('http')) {
@@ -732,44 +918,21 @@ class WebViewControllerr extends GetxController {
               else if (video.src.includes('720')) q = 720;
               else if (video.src.includes('480')) q = 480;
               else if (video.src.includes('360')) q = 360;
-              else if (video.src.includes('240')) q = 240;
-              else if (video.src.includes('144')) q = 144;
-              if (q === targetQuality) return video.src;
+              
+              if (q == targetQuality) return video.src;
               if (q > 0 && (bestMatchUrl === '' || Math.abs(q - targetQuality) < Math.abs(qualityScore - targetQuality))) {
                 bestMatchUrl = video.src;
                 qualityScore = q;
-              }
-            }
-            const sources = video.querySelectorAll('source');
-            for (const source of sources) {
-              if (source.src && source.src.startsWith('http')) {
-                let q = 0;
-                if (source.src.includes('1080')) q = 1080;
-                else if (source.src.includes('720')) q = 720;
-                else if (source.src.includes('480')) q = 480;
-                else if (source.src.includes('360')) q = 360;
-                else if (source.src.includes('240')) q = 240;
-                else if (source.src.includes('144')) q = 144;
-                if (q === targetQuality) return source.src;
-                if (q > 0 && (bestMatchUrl === '' || Math.abs(q - targetQuality) < Math.abs(qualityScore - targetQuality))) {
-                  bestMatchUrl = source.src;
-                  qualityScore = q;
-                }
               }
             }
           }
           return bestMatchUrl;
         })();
       ''');
-      if (jsResult != null &&
-          jsResult.toString().isNotEmpty &&
-          jsResult.toString() != 'null' &&
-          jsResult.toString() != '') {
-        String foundUrl = jsResult.toString();
-        if (foundUrl.startsWith('http')) return foundUrl;
-      }
-    } catch (e) {}
-    return bestUrl.isEmpty ? detectedVideoUrl.value! : bestUrl;
+      return result?.toString();
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<String?> _downloadFile(
@@ -784,10 +947,11 @@ class WebViewControllerr extends GetxController {
         'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*',
-        'Referer': AppEnv.facebookReferer,
       };
+
       final tempDir = await getTemporaryDirectory();
       final tempPath = path.join(tempDir.path, fileName);
+
       await dio.download(
         url,
         tempPath,
@@ -795,6 +959,7 @@ class WebViewControllerr extends GetxController {
           _updateProgress(received, total);
         },
       );
+
       bool gallerySaved = false;
       try {
         final hasAccess = await Gal.hasAccess();
@@ -807,7 +972,9 @@ class WebViewControllerr extends GetxController {
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-      } catch (e) {}
+      } catch (e) {
+        print('Gallery save error: $e');
+      }
 
       final downloadController = Get.find<DownloadController>();
       final actualSizeBytes = await File(tempPath).length();
@@ -820,11 +987,13 @@ class WebViewControllerr extends GetxController {
         estimatedSize: selectedDownloadSize.value,
       );
       await downloadController.loadHistory();
+
       if (!gallerySaved) {
         Get.snackbar('Info', 'Video saved to app folder: $fileName');
       }
       return tempPath;
     } catch (e) {
+      print('Download error: $e');
       return null;
     }
   }
@@ -892,28 +1061,7 @@ class WebViewControllerr extends GetxController {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Estimated Size:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        Text(
-                          selectedDownloadSize.value ?? 'Unknown',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Actual Size:',
+                          'Downloaded:',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -1074,6 +1222,9 @@ class WebViewControllerr extends GetxController {
       Get.snackbar('No Video', 'No video detected yet. Please wait.');
       return;
     }
+
+    isShowingDownloadPopup.value = true;
+
     Get.bottomSheet(
       _DownloadQualityBottomSheet(
         isFetchingSizes: isFetchingSizes.value,
@@ -1085,14 +1236,20 @@ class WebViewControllerr extends GetxController {
         audioSize128kbps: audioSize128kbps.value,
         audioSize192kbps: audioSize192kbps.value,
         audioSize320kbps: audioSize320kbps.value,
-        onWatch: () => Get.back(),
+        onWatch: () {
+          isShowingDownloadPopup.value = false;
+          Get.back();
+        },
         onDownloadTier: (tier, label, size) async {
+          isShowingDownloadPopup.value = false;
           await onDownloadTierSelected(tier, label, size);
         },
       ),
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-    );
+    ).whenComplete(() {
+      isShowingDownloadPopup.value = false;
+    });
   }
 
   Future<void> onDownloadTierSelected(
@@ -1114,6 +1271,10 @@ class WebViewControllerr extends GetxController {
   }
 
   WebViewController get controller => webController;
+}
+
+extension on WebViewController {
+  void enableDebugging(bool bool) {}
 }
 
 // Download Quality Bottom Sheet
@@ -1466,6 +1627,7 @@ class _DownloadQualityBottomSheetState
                       color: Colors.white,
                     ),
                     label: Text(
+                      overflow: TextOverflow.ellipsis,
                       _picked == null
                           ? 'Select quality'
                           : 'Download ${_historyLabel(_picked!)}',
@@ -1481,7 +1643,10 @@ class _DownloadQualityBottomSheetState
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 5,
+                      ),
                       elevation: 0,
                     ),
                   ),
@@ -1648,7 +1813,3 @@ class _DownloadTierOptionCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
