@@ -973,13 +973,13 @@ abstract class AppLocalizations {
   /// **'Select Language'**
   String get selectLanguage;
 
-  /// No description provided for @success.
+  /// Success message title
   ///
   /// In en, this message translates to:
   /// **'Success'**
   String get success;
 
-  /// No description provided for @languageSelected.
+  /// Message shown after language selection
   ///
   /// In en, this message translates to:
   /// **'selected'**

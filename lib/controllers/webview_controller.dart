@@ -1,5 +1,4 @@
 
-
 // ignore_for_file: deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
 
 import 'package:get/get.dart';
@@ -51,7 +50,7 @@ class WebViewControllerr extends GetxController {
   var downloadIsAudio = false.obs;
   var downloadProgressIsLowQuality = false.obs;
 
-  // New progress tracking variables
+  // Progress tracking variables for UI
   var animatedProgress = 0.0.obs;
   var etaTime = ''.obs;
   var downloadedSize = '0 MB'.obs;
@@ -79,12 +78,10 @@ class WebViewControllerr extends GetxController {
 
   final String url;
 
-  // Store all captured video URLs
   final Set<String> _capturedVideoUrls = {};
   Timer? _captureTimer;
-
-  // Track if we're showing download UI
   var isShowingDownloadPopup = false.obs;
+  bool _popupShownForCurrentVideo = false;
 
   WebViewControllerr({required this.url});
 
@@ -140,51 +137,44 @@ class WebViewControllerr extends GetxController {
             errorMessage.value = null;
             isVideoDetected.value = false;
             detectedVideoUrl.value = null;
+            _popupShownForCurrentVideo = false;
             _resetFileSizes();
           },
           onPageFinished: (String url) {
             isLoading.value = false;
             _injectJS();
-
-            // Start capturing network requests
             _startNetworkCapture();
 
-            Future.delayed(const Duration(milliseconds: 2000), () {
+            Future.delayed(const Duration(milliseconds: 1500), () {
               if (detectedVideoUrl.value != null &&
                   showAutoPopup.value &&
                   !isDownloading.value &&
-                  !isShowingDownloadPopup.value) {
+                  !isShowingDownloadPopup.value &&
+                  !_popupShownForCurrentVideo) {
+                _popupShownForCurrentVideo = true;
                 _showDownloadOptionsPopup();
               }
             });
           },
           onWebResourceError: (WebResourceError error) {
-            // Don't show error for unsupported schemes
-            if (error.errorCode == -2 || // ERR_UNKNOWN_URL_SCHEME
+            if (error.errorCode == -2 ||
                 error.description.contains('ERR_UNKNOWN_URL_SCHEME')) {
-              // Silently ignore - don't show error message
               return;
             }
             isLoading.value = false;
-            // Don't set error message for navigation errors
             if (!error.description.contains('URL scheme')) {
               errorMessage.value = 'Failed to load page';
             }
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
-
-            // Block unsupported URL schemes
             if (url.startsWith('fb://') ||
                 url.startsWith('intent://') ||
                 url.startsWith('tel:') ||
                 url.startsWith('sms:') ||
                 url.startsWith('mailto:')) {
-              // Just prevent navigation without showing any error
               return NavigationDecision.prevent;
             }
-
-            // Capture video URLs from navigation
             _checkUrlForVideo(url);
             return NavigationDecision.navigate;
           },
@@ -195,10 +185,11 @@ class WebViewControllerr extends GetxController {
   }
 
   void _startNetworkCapture() {
-    // Periodically scan the page for video elements
     _captureTimer?.cancel();
     _captureTimer = Timer.periodic(const Duration(milliseconds: 1500), (timer) {
-      if (!isLoading.value && !isDownloading.value) {
+      if (!isLoading.value &&
+          !isDownloading.value &&
+          !_popupShownForCurrentVideo) {
         _scanForVideos();
       }
     });
@@ -208,8 +199,6 @@ class WebViewControllerr extends GetxController {
     webController.runJavaScript('''
       (function() {
         const videos = [];
-        
-        // Find all video elements
         document.querySelectorAll('video').forEach(video => {
           if (video.src && video.src.startsWith('http')) {
             videos.push(video.src);
@@ -220,15 +209,11 @@ class WebViewControllerr extends GetxController {
             }
           });
         });
-        
-        // Find video URLs in iframes
         document.querySelectorAll('iframe').forEach(iframe => {
           if (iframe.src && (iframe.src.includes('.mp4') || iframe.src.includes('video'))) {
             videos.push(iframe.src);
           }
         });
-        
-        // Find data attributes
         document.querySelectorAll('[data-video-url], [data-hd-url], [data-sd-url], [data-video]').forEach(el => {
           const url = el.getAttribute('data-video-url') || 
                      el.getAttribute('data-hd-url') || 
@@ -238,7 +223,6 @@ class WebViewControllerr extends GetxController {
             videos.push(url);
           }
         });
-        
         if (videos.length > 0 && videos[0]) {
           VideoChannel.postMessage(videos[0]);
         }
@@ -247,11 +231,9 @@ class WebViewControllerr extends GetxController {
   }
 
   void _checkUrlForVideo(String url) {
-    // Check if URL is a video file - ignore fb:// and other schemes
     if (!url.startsWith('http') && !url.startsWith('https')) {
       return;
     }
-
     final lowerUrl = url.toLowerCase();
     if (lowerUrl.contains('.mp4') ||
         lowerUrl.contains('.m3u8') ||
@@ -276,6 +258,7 @@ class WebViewControllerr extends GetxController {
     audioSize320kbps.value = null;
     selectedDownloadSize.value = null;
     selectedDownloadQuality.value = null;
+    isFetchingSizes.value = false;
   }
 
   Future<void> _loadUrl() async {
@@ -286,7 +269,6 @@ class WebViewControllerr extends GetxController {
       await webController.loadRequest(uri);
     } catch (e) {
       isLoading.value = false;
-      // Don't show error for URL scheme issues
       if (!e.toString().contains('URL scheme')) {
         errorMessage.value = 'Error loading: $url';
       }
@@ -295,11 +277,8 @@ class WebViewControllerr extends GetxController {
 
   void _injectJS() {
     webController.runJavaScript('''
-      // Enhanced video detection
       function findAllVideoUrls() {
         const urls = [];
-        
-        // Check all video elements
         const videos = document.querySelectorAll('video');
         for (const video of videos) {
           if (video.src && video.src.startsWith('http')) {
@@ -315,8 +294,6 @@ class WebViewControllerr extends GetxController {
             }
           }
         }
-        
-        // Check meta tags
         const metaTags = document.querySelectorAll('meta[property="og:video"], meta[property="og:video:url"], meta[name="twitter:player:stream"]');
         for (const meta of metaTags) {
           const content = meta.getAttribute('content');
@@ -324,21 +301,16 @@ class WebViewControllerr extends GetxController {
             urls.push(content);
           }
         }
-        
         if (urls.length > 0 && urls[0]) {
           VideoChannel.postMessage(urls[0]);
         }
       }
-      
       findAllVideoUrls();
-      
-      // Run every 2 seconds
       setInterval(findAllVideoUrls, 2000);
     ''');
   }
 
   void _onVideoDetected(String url) {
-    // Filter out non-video URLs
     if (!url.contains('.mp4') &&
         !url.contains('video') &&
         !url.contains('reel') &&
@@ -351,20 +323,9 @@ class WebViewControllerr extends GetxController {
     print('Video detected: $url');
     detectedVideoUrl.value = url;
     isVideoDetected.value = true;
+    _popupShownForCurrentVideo = false;
 
-    // Fetch file sizes
     _fetchFileSizes(url);
-
-    // Auto show popup if enabled and not already showing
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (isVideoDetected.value &&
-          detectedVideoUrl.value != null &&
-          showAutoPopup.value &&
-          !isDownloading.value &&
-          !isShowingDownloadPopup.value) {
-        _showDownloadOptionsPopup();
-      }
-    });
   }
 
   Future<void> _fetchFileSizes(String videoUrl) async {
@@ -595,8 +556,6 @@ class WebViewControllerr extends GetxController {
     downloadedSize.value = '0 MB';
     downloadPercentage.value = 0;
     downloadStatus.value = 'Starting download...';
-
-    // Start smooth animation
     _startAnimationTimer();
   }
 
@@ -637,7 +596,6 @@ class WebViewControllerr extends GetxController {
         }
         downloadSpeed.value = speedStr;
 
-        // Calculate ETA
         if (totalKnown.value && speedBytesPerSec > 0) {
           final remainingBytes = actualTotalBytes.value - receivedBytes.value;
           final remainingSeconds = remainingBytes / speedBytesPerSec;
@@ -652,8 +610,6 @@ class WebViewControllerr extends GetxController {
             downloadStatus.value = etaTime.value;
           }
         }
-
-        // Update downloaded size
         downloadedSize.value = _formatFileSize(receivedBytes.value);
       }
       _lastSpeedCalcTime = now;
@@ -676,25 +632,20 @@ class WebViewControllerr extends GetxController {
       final newProgress = (received / total).clamp(0.0, 1.0);
       downloadProgress.value = newProgress;
 
-      String statusText = '';
       if (etaTime.value.isNotEmpty && etaTime.value != 'Starting download...') {
-        statusText = etaTime.value;
-      } else {
-        final remaining = actualTotalBytes.value - receivedBytes.value;
-        if (remaining > 0 &&
-            downloadSpeed.value != '0 KB/s' &&
-            downloadSpeed.value != '0 B/s') {
-          final speedBytes = _parseSpeedToBytes(downloadSpeed.value);
-          if (speedBytes > 0) {
-            final remainingSecs = remaining / speedBytes;
-            final mins = (remainingSecs / 60).floor();
-            final secs = (remainingSecs % 60).floor();
-            if (mins > 0) {
-              statusText = '${mins}m ${secs}s left';
-            } else {
-              statusText = '${secs}s left';
-            }
-            downloadStatus.value = statusText;
+        downloadStatus.value = etaTime.value;
+      } else if (downloadSpeed.value != '0 KB/s' &&
+          downloadSpeed.value != '0 B/s') {
+        final speedBytes = _parseSpeedToBytes(downloadSpeed.value);
+        if (speedBytes > 0) {
+          final remaining = actualTotalBytes.value - receivedBytes.value;
+          final remainingSecs = remaining / speedBytes;
+          final mins = (remainingSecs / 60).floor();
+          final secs = (remainingSecs % 60).floor();
+          if (mins > 0) {
+            downloadStatus.value = '${mins}m ${secs}s left';
+          } else {
+            downloadStatus.value = '${secs}s left';
           }
         }
       }
@@ -868,8 +819,6 @@ class WebViewControllerr extends GetxController {
         'video_${DateTime.now().millisecondsSinceEpoch}_$quality.mp4';
     try {
       String videoUrl = detectedVideoUrl.value!;
-
-      // Try to find quality-specific version
       final qualityUrl = await _findQualityVideo(quality);
       if (qualityUrl != null &&
           qualityUrl.isNotEmpty &&
@@ -1061,7 +1010,28 @@ class WebViewControllerr extends GetxController {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Downloaded:',
+                          'Estimated Size:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          selectedDownloadSize.value ?? 'Unknown',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Actual Size:',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -1273,10 +1243,6 @@ class WebViewControllerr extends GetxController {
   WebViewController get controller => webController;
 }
 
-extension on WebViewController {
-  void enableDebugging(bool bool) {}
-}
-
 // Download Quality Bottom Sheet
 class _DownloadQualityBottomSheet extends StatefulWidget {
   final bool isFetchingSizes;
@@ -1463,13 +1429,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: '1080p',
               subtitle: 'Full HD • Best Quality',
-              size: widget.size1080p ?? 'Calculating...',
+              size: widget.size1080p ?? '~50 MB',
               icon: Icons.high_quality,
               gradient: const LinearGradient(
                 colors: [Color(0xFF1e3c72), Color(0xFF2a5298)],
               ),
               color: Colors.blue,
-              isLoading: widget.isFetchingSizes && widget.size1080p == null,
+              isLoading: false,
               isSelected: _isSelected(_k1080p),
               onTap: () => setState(() => _picked = _k1080p),
             ),
@@ -1477,13 +1443,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: '720p',
               subtitle: 'HD • High Quality',
-              size: widget.size720p ?? 'Calculating...',
+              size: widget.size720p ?? '~35 MB',
               icon: Icons.high_quality,
               gradient: const LinearGradient(
                 colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
               ),
               color: Colors.cyan,
-              isLoading: widget.isFetchingSizes && widget.size720p == null,
+              isLoading: false,
               isSelected: _isSelected(_k720p),
               onTap: () => setState(() => _picked = _k720p),
             ),
@@ -1491,13 +1457,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: '480p',
               subtitle: 'SD • Medium Quality',
-              size: widget.size480p ?? 'Calculating...',
+              size: widget.size480p ?? '~22 MB',
               icon: Icons.sd_storage,
               gradient: const LinearGradient(
                 colors: [Color(0xFF757F9A), Color(0xFFD7DDE8)],
               ),
               color: Colors.grey,
-              isLoading: widget.isFetchingSizes && widget.size480p == null,
+              isLoading: false,
               isSelected: _isSelected(_k480p),
               onTap: () => setState(() => _picked = _k480p),
             ),
@@ -1505,13 +1471,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: '360p',
               subtitle: 'Low Quality • Good for slow connections',
-              size: widget.size360p ?? 'Calculating...',
+              size: widget.size360p ?? '~15 MB',
               icon: Icons.sd_storage,
               gradient: const LinearGradient(
                 colors: [Color(0xFF455463), Color(0xFFEEF2F3)],
               ),
               color: const Color(0xFF455463),
-              isLoading: widget.isFetchingSizes && widget.size360p == null,
+              isLoading: false,
               isSelected: _isSelected(_k360p),
               onTap: () => setState(() => _picked = _k360p),
             ),
@@ -1519,13 +1485,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: '144p',
               subtitle: 'Very Low Quality • Smallest size',
-              size: widget.size144p ?? 'Calculating...',
+              size: widget.size144p ?? '~6 MB',
               icon: Icons.sd_storage,
               gradient: const LinearGradient(
                 colors: [Color(0xFFB9937A), Color(0xFFD4C5B0)],
               ),
               color: Colors.brown,
-              isLoading: widget.isFetchingSizes && widget.size144p == null,
+              isLoading: false,
               isSelected: _isSelected(_k144p),
               onTap: () => setState(() => _picked = _k144p),
             ),
@@ -1554,14 +1520,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: 'MP3 128kbps',
               subtitle: 'Good Quality • Balanced file size',
-              size: widget.audioSize128kbps ?? 'Calculating...',
+              size: widget.audioSize128kbps ?? '~5 MB',
               icon: Icons.audiotrack,
               gradient: const LinearGradient(
                 colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
               ),
               color: Colors.green,
-              isLoading:
-                  widget.isFetchingSizes && widget.audioSize128kbps == null,
+              isLoading: false,
               isSelected: _isSelected(_kAudio128),
               onTap: () => setState(() => _picked = _kAudio128),
             ),
@@ -1569,14 +1534,13 @@ class _DownloadQualityBottomSheetState
             _DownloadTierOptionCard(
               title: 'MP3 320kbps',
               subtitle: 'Best Quality • Largest file size',
-              size: widget.audioSize320kbps ?? 'Calculating...',
+              size: widget.audioSize320kbps ?? '~12 MB',
               icon: Icons.audiotrack,
               gradient: const LinearGradient(
                 colors: [Color(0xFF0b5e0b), Color(0xFF2e7d32)],
               ),
               color: Colors.green,
-              isLoading:
-                  widget.isFetchingSizes && widget.audioSize320kbps == null,
+              isLoading: false,
               isSelected: _isSelected(_kAudio320),
               onTap: () => setState(() => _picked = _kAudio320),
             ),
@@ -1612,7 +1576,7 @@ class _DownloadQualityBottomSheetState
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: widget.isFetchingSizes || _picked == null
+                    onPressed: _picked == null
                         ? null
                         : () async {
                             final tier = _picked!;
@@ -1644,7 +1608,7 @@ class _DownloadQualityBottomSheetState
                         borderRadius: BorderRadius.circular(14),
                       ),
                       padding: const EdgeInsets.symmetric(
-                        vertical: 16,
+                        vertical: 14,
                         horizontal: 5,
                       ),
                       elevation: 0,
@@ -1687,7 +1651,7 @@ class _DownloadTierOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isLoading ? null : onTap,
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1751,26 +1715,14 @@ class _DownloadTierOptionCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  if (isLoading)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(
-                          color.withOpacity(0.6),
-                        ),
-                      ),
-                    )
-                  else
-                    Text(
-                      size,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
+                  Text(
+                    size,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: color,
                     ),
+                  ),
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(

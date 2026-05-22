@@ -1,5 +1,3 @@
-
-
 // lib/features/home/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -75,7 +73,7 @@ class _BrowserScreen extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -128,7 +126,8 @@ class _BrowserScreen extends GetView<HomeController> {
               children: [
                 // Banner Ad
                 Obx(
-                  () => controller.isBannerLoaded.value &&
+                  () =>
+                      controller.isBannerLoaded.value &&
                           controller.bannerAd != null
                       ? Container(
                           key: ValueKey(
@@ -188,7 +187,7 @@ class _BrowserScreen extends GetView<HomeController> {
 
   Widget _buildUrlInputSection(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -294,7 +293,7 @@ class _BrowserScreen extends GetView<HomeController> {
 
   Widget _buildMrecAd(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Obx(
       () => Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -338,7 +337,7 @@ class _BrowserScreen extends GetView<HomeController> {
 
   Widget _buildVideoPreview(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Obx(
       () => Container(
         margin: const EdgeInsets.all(16),
@@ -451,7 +450,7 @@ class _BrowserScreen extends GetView<HomeController> {
 
   Widget _defaultThumbnail(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return SizedBox(
       height: 200,
       width: double.infinity,
@@ -480,7 +479,7 @@ class _BrowserScreen extends GetView<HomeController> {
 
   Widget _buildInstructionsSection(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -534,7 +533,7 @@ class _BrowserScreen extends GetView<HomeController> {
 
   Widget _buildTipSection(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
@@ -567,7 +566,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -620,7 +619,8 @@ class _WatchScreenWithAd extends GetView<HomeController> {
               children: [
                 // Watch Banner Ad
                 Obx(
-                  () => controller.isWatchBannerLoaded.value &&
+                  () =>
+                      controller.isWatchBannerLoaded.value &&
                           controller.watchBannerAd != null
                       ? Container(
                           key: ValueKey(
@@ -646,7 +646,6 @@ class _WatchScreenWithAd extends GetView<HomeController> {
                       const SizedBox(height: 20),
                       _buildProTipsSection(context),
                       const SizedBox(height: 20),
-                      _buildHelpButton(context),
                     ],
                   ),
                 ),
@@ -681,7 +680,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
 
   Widget _buildHeroSection(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -741,7 +740,10 @@ class _WatchScreenWithAd extends GetView<HomeController> {
                   controller.openFacebook();
               },
               icon: const Icon(Icons.open_in_browser),
-              label: Text(localizations.openApp, style: const TextStyle(fontSize: 16)),
+              label: Text(
+                localizations.openApp,
+                style: const TextStyle(fontSize: 16),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: const Color(0xFF0066ff),
@@ -759,7 +761,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
 
   Widget _buildHowToSection(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
@@ -898,7 +900,7 @@ class _WatchScreenWithAd extends GetView<HomeController> {
 
   Widget _buildProTipsSection(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -961,28 +963,5 @@ class _WatchScreenWithAd extends GetView<HomeController> {
     );
   }
 
-  Widget _buildHelpButton(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
-    
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          if (Get.isRegistered<HomeController>()) {
-            controller.showHelpGuide();
-          }
-        },
-        icon: const Icon(Icons.support_agent, color: Color(0xFF0066ff)),
-        label: Text(
-          localizations.needHelp,
-          style: const TextStyle(fontSize: 14, color: Color(0xFF0066ff)),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFF0066ff)),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      ),
-    );
-  }
+  
 }

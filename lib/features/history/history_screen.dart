@@ -1,4 +1,3 @@
-
 // lib/features/history/history_screen.dart (Updated version with full refresh)
 
 import 'package:facebook_video_downloader/controllers/history_controller.dart';
@@ -36,7 +35,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   final Set<int> _deletingItems = {};
   int _currentBottomNavIndex = 2;
-  
+
   // Add this for refresh state
   bool _isRefreshing = false;
 
@@ -196,19 +195,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
   // UPDATED: Refresh with loading state and circular indicators
   Future<void> _refreshHistory(BuildContext context) async {
     final localizations = AppLocalizations.of(context)!;
-    
+
     // Show refreshing state
     setState(() {
       _isRefreshing = true;
     });
-    
+
     try {
       final previousCount = controller.downloadHistory.length;
       await analyticsController.logRefreshHistory(previousCount);
-      
+
       // This will trigger full rebuild of ALL widgets
       await controller.fullRefreshHistory();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -272,7 +271,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() {
       _deletingItems.remove(itemId);
     });
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${item['fileName']} ${localizations.deleted}')),
@@ -568,7 +567,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     padding: const EdgeInsets.only(left: 20),
                     child: const Icon(
                       Icons.delete,
-                      color: Colors.white,
+                      color: Color.fromARGB(255, 255, 255, 255),
                       size: 30,
                     ),
                   ),
@@ -578,7 +577,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     padding: const EdgeInsets.only(right: 20),
                     child: const Icon(
                       Icons.delete,
-                      color: Colors.white,
+                      color: Color.fromARGB(255, 255, 255, 255),
                       size: 30,
                     ),
                   ),
@@ -586,7 +585,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     item: item,
                     index: index,
                     onPlay: () => _playVideo(context, item, index),
-                    onDeleteConfirm: () => _showDeleteConfirmationDialog(context, item),
+                    onDeleteConfirm: () =>
+                        _showDeleteConfirmationDialog(context, item),
                     onDelete: () => _deleteVideo(context, item, itemId),
                     formatDate: () => _formatDate(context, item['dateTime']),
                     // Pass refresh state to force thumbnail reload

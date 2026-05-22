@@ -166,7 +166,14 @@
   
   "selectLanguage": "Select Language",
   "success": "Success",
-  "languageSelected": "selected"
+  "languageSelected": "selected",
+  
 
 
+  "@success": {
+    "description": "Success message title"
+  },
+  "@languageSelected": {
+    "description": "Message shown after language selection"
+  }
 }
