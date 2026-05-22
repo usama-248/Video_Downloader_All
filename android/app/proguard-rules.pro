@@ -26,6 +26,25 @@
 -keep class com.google.android.gms.ads.** { *; }
 -keep class io.flutter.plugins.googlemobileads.** { *; }
 
+# AdMob mediation adapters
+-keep class com.google.ads.mediation.** { *; }
+-keep class com.google.android.gms.ads.mediation.** { *; }
+
+# Meta Audience Network
+-keep class com.facebook.ads.** { *; }
+-keep class com.google.ads.mediation.facebook.** { *; }
+-dontwarn com.facebook.ads.**
+
+# Liftoff Monetize (Vungle)
+-keep class com.vungle.** { *; }
+-keep class com.google.ads.mediation.vungle.** { *; }
+-dontwarn com.vungle.**
+
+# Mintegral
+-keep class com.mbridge.** { *; }
+-keep class com.google.ads.mediation.mintegral.** { *; }
+-dontwarn com.mbridge.**
+
 # Gson (used by Firebase / Play Services)
 -keepattributes Signature
 -keep class com.google.gson.** { *; }

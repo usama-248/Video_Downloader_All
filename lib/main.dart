@@ -16,8 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:facebook_video_downloader/core/config/admob_config.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:facebook_video_downloader/core/services/mobile_ads_service.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,24 +44,10 @@ Future<void> main() async {
     debugPrint('❌ Firebase initialization error: $e');
   }
 
-  /// 3. Mobile Ads init with test device configuration
+  /// 3. Mobile Ads + mediation adapters (Meta, Liftoff, Mintegral)
   try {
-    await MobileAds.instance.initialize();
-
-    // Configure test devices in debug mode
-    if (kDebugMode) {
-      final requestConfiguration = RequestConfiguration(
-        testDeviceIds: [
-          // Add your test device IDs here when running on real devices
-          // '33BE2250B43518CCDA7DE426D04EE231', // Example device ID
-        ],
-      );
-      await MobileAds.instance.updateRequestConfiguration(requestConfiguration);
-      debugPrint('✅ Test devices configured for Mobile Ads');
-    }
-
-    await AdMobConfig.configure();
-    debugPrint('✅ Mobile Ads initialized successfully');
+    await MobileAdsService.initialize();
+    debugPrint('✅ Mobile Ads & mediation initialized successfully');
   } catch (e) {
     debugPrint('❌ Mobile Ads initialization error: $e');
   }

@@ -4,6 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../config/admob_config.dart';
 
+void _logMediationSource(Ad ad, String format) {
+  final adapter = ad.responseInfo?.mediationAdapterClassName;
+  if (adapter != null) {
+    debugPrint('[ADS] $format loaded via mediation adapter: $adapter');
+  }
+}
+
 class AdService {
   static final AdService _instance = AdService._internal();
   factory AdService() => _instance;
@@ -22,6 +29,7 @@ class AdService {
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           _interstitialAd = ad;
+          _logMediationSource(ad, 'Interstitial');
           _setupFullScreenCallback(ad);
         },
         onAdFailedToLoad: (error) {
@@ -49,6 +57,7 @@ class AdService {
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
+          _logMediationSource(ad, 'Rewarded');
           _setupFullScreenCallback(ad);
         },
         onAdFailedToLoad: (error) {
@@ -82,6 +91,7 @@ class AdService {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          _logMediationSource(ad, 'Banner');
           print('BannerAd loaded');
         },
         onAdFailedToLoad: (ad, error) {
@@ -115,6 +125,7 @@ class AdService {
       adLoadCallback: AppOpenAdLoadCallback(
         onAdLoaded: (ad) {
           _appOpenAd = ad;
+          _logMediationSource(ad, 'App open');
           _setupFullScreenCallback(ad);
         },
         onAdFailedToLoad: (error) {
