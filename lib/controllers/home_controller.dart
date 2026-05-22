@@ -1,3 +1,4 @@
+
 // ignore_for_file: avoid_print, unnecessary_underscores, deprecated_member_use
 
 import 'package:facebook_video_downloader/core/services/screen_time_tracker.dart';
@@ -31,6 +32,9 @@ class HomeController extends GetxController {
   var imageUrl = Rx<String?>(null);
   var isFetching = false.obs;
   var showVideoPreview = false.obs;
+
+  // Flag to track if we came back from webview
+  var _justReturnedFromWebview = false;
 
   // Ad variables
   var isBannerLoaded = false.obs;
@@ -67,13 +71,16 @@ class HomeController extends GetxController {
     _loadMrecAd();
     _loadInterstitialAd();
     _loadWatchBannerAd();
-    _startScreenTimeTracking(); // ✅ START SCREEN TIME TRACKING
+    _startScreenTimeTracking();
+
+    // Add navigation listener to detect returning to home screen
+    _setupNavigationListener();
   }
 
   @override
   void onClose() {
     _isClosed = true;
-    _stopScreenTimeTracking(); // ✅ STOP SCREEN TIME TRACKING
+    _stopScreenTimeTracking();
     // Dispose controller properly
     urlController?.dispose();
     urlController = null;
@@ -82,6 +89,19 @@ class HomeController extends GetxController {
     _interstitialAd?.dispose();
     _watchBannerAd?.dispose();
     super.onClose();
+  }
+
+  void _setupNavigationListener() {
+    // Listen to route changes
+    ever(currentIndex, (int index) {
+      if (index == 0 && _justReturnedFromWebview) {
+        // We're back on browser tab after webview
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _clearPreviewAndShowMrec();
+        });
+        _justReturnedFromWebview = false;
+      }
+    });
   }
 
   // ==================== SCREEN TIME TRACKING ====================
@@ -184,7 +204,7 @@ class HomeController extends GetxController {
       name: 'app_open',
       parameters: {
         'timestamp': DateTime.now().toIso8601String(),
-        'is_premium': false, // Update based on user status
+        'is_premium': false,
       },
     );
   }
@@ -530,7 +550,6 @@ class HomeController extends GetxController {
     Get.dialog(
       WillPopScope(
         onWillPop: () async {
-          // Log back button press on dialog
           await _analytics.logEvent(
             name: 'disclaimer_back_press',
             parameters: {
@@ -539,7 +558,7 @@ class HomeController extends GetxController {
               'timestamp': DateTime.now().toIso8601String(),
             },
           );
-          return false; // Prevent back press
+          return false;
         },
         child: AlertDialog(
           shape: RoundedRectangleBorder(
@@ -699,10 +718,8 @@ class HomeController extends GetxController {
             ),
           ),
           actions: [
-            // CANCEL BUTTON
             TextButton(
               onPressed: () async {
-                // Analytics for Cancel button
                 await _analytics.logEvent(
                   name: 'disclaimer_cancel_click',
                   parameters: {
@@ -733,10 +750,8 @@ class HomeController extends GetxController {
                 ),
               ),
             ),
-            // ACCEPT BUTTON
             ElevatedButton(
               onPressed: () async {
-                // Analytics for Accept button
                 await _analytics.logEvent(
                   name: 'disclaimer_accept_click',
                   parameters: {
@@ -803,10 +818,13 @@ class HomeController extends GetxController {
       size: AdSize.mediumRectangle,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          if (!_isClosed) isMrecLoaded.value = true;
+          if (!_isClosed) {
+            isMrecLoaded.value = true;
+            print('✅ MREC Ad loaded successfully');
+          }
         },
         onAdFailedToLoad: (ad, error) {
-          print('MREC Ad failed to load: $error');
+          print('❌ MREC Ad failed to load: $error');
           ad.dispose();
           if (!_isClosed) isMrecLoaded.value = false;
         },
@@ -895,7 +913,6 @@ class HomeController extends GetxController {
   Future<void> pasteLink() async {
     if (_isClosed) return;
 
-    // Analytics for paste button
     await logPasteLink();
     await showInterstitialAd();
 
@@ -914,7 +931,6 @@ class HomeController extends GetxController {
   Future<void> clearUrl() async {
     if (_isClosed) return;
 
-    // Analytics for clear button
     await logClearUrl();
 
     updateUrlText('');
@@ -954,9 +970,7 @@ class HomeController extends GetxController {
   Future<void> retryFetch() async {
     if (_isClosed) return;
 
-    // Analytics for retry button
     await logRetryFetch();
-
     await fetchVideo();
   }
 
@@ -997,19 +1011,23 @@ class HomeController extends GetxController {
       finalUrl = 'https://$finalUrl';
     }
 
-    Get.toNamed('/webview', arguments: {'url': finalUrl});
+    // Set flag that we're going to webview
+    _justReturnedFromWebview = true;
+
+    // Navigate to webview
+    await Get.toNamed('/webview', arguments: {'url': finalUrl});
+
+    // This code runs AFTER returning from webview
+    _clearPreviewAndShowMrec();
   }
 
   Future<void> shareVideo() async {
     if (_isClosed) return;
 
-    // Analytics for share button
     await logShareVideo();
 
-    // Implement share functionality
     String videoUrl = getUrlText();
     if (videoUrl.isNotEmpty) {
-      // Add your share logic here
       Get.snackbar(
         'Share',
         'Sharing video...',
@@ -1021,10 +1039,8 @@ class HomeController extends GetxController {
   Future<void> saveToDevice() async {
     if (_isClosed) return;
 
-    // Analytics for save button
     await logSaveToDevice();
 
-    // Implement save to device functionality
     Get.snackbar(
       'Save',
       'Saving video to device...',
@@ -1055,10 +1071,8 @@ class HomeController extends GetxController {
   Future<void> refreshWatchTab() async {
     if (_isClosed) return;
 
-    // Analytics for refresh button
     await logRefreshWatchTab();
 
-    // Implement refresh logic
     Get.snackbar(
       'Refresh',
       'Refreshing content...',
@@ -1119,10 +1133,8 @@ class HomeController extends GetxController {
           ],
         ),
         actions: [
-          // GOT IT BUTTON
           TextButton(
             onPressed: () async {
-              // Analytics for Got It button
               await logHelpGuideGotIt();
               Get.back();
             },
@@ -1171,7 +1183,6 @@ class HomeController extends GetxController {
   Future<void> deleteAllSaved() async {
     if (_isClosed) return;
 
-    // Show confirmation dialog first
     bool? confirm = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Delete All'),
@@ -1193,10 +1204,7 @@ class HomeController extends GetxController {
     );
 
     if (confirm == true) {
-      // Analytics for delete all button
       await logDeleteAllSaved();
-
-      // Implement delete all logic
       Get.snackbar('Deleted', 'All videos deleted successfully!');
     }
   }
@@ -1204,37 +1212,30 @@ class HomeController extends GetxController {
   Future<void> deleteSingleSaved(int index, String videoTitle) async {
     if (_isClosed) return;
 
-    // Analytics for delete single button
     await logDeleteSingleSaved(index, videoTitle);
 
-    // Implement delete single logic
     Get.snackbar('Deleted', 'Video deleted successfully!');
   }
 
   Future<void> playSavedVideo(String videoTitle) async {
     if (_isClosed) return;
 
-    // Analytics for play button
     await logPlaySavedVideo(videoTitle);
 
-    // Implement play video logic
     Get.toNamed('/video_player', arguments: {'title': videoTitle});
   }
 
   Future<void> shareSavedVideo(String videoTitle) async {
     if (_isClosed) return;
 
-    // Analytics for share button on saved video
     await logShareSavedVideo(videoTitle);
 
-    // Implement share logic
     Get.snackbar('Share', 'Sharing $videoTitle...');
   }
 
   Future<void> closeVideoPlayer() async {
     if (_isClosed) return;
 
-    // Analytics for close button
     await logVideoPlayerClose();
 
     Get.back();
@@ -1252,7 +1253,6 @@ class HomeController extends GetxController {
   void onBackPressed() async {
     if (_isClosed) return;
 
-    // Analytics for back button
     await logBackButtonClick();
 
     Get.back();
@@ -1260,11 +1260,31 @@ class HomeController extends GetxController {
 
   String? get thumbnailUrl => imageUrl.value;
   String? get videoTitle => title.value;
+
+  // ==================== Clear Preview and Show MREC ====================
+
+  /// Clears the video preview, removes link from URL field, and ensures MREC ad is shown
+  void _clearPreviewAndShowMrec() {
+    if (_isClosed) return;
+
+    print('🔄 Clearing preview and showing MREC...');
+
+    // Clear video preview
+    resetVideoPreview();
+
+    // Clear URL input field
+    updateUrlText('');
+
+    // Force reload MREC ad to ensure it shows
+    if (_mrecAd != null) {
+      _mrecAd?.dispose();
+    }
+    isMrecLoaded.value = false;
+    _loadMrecAd();
+
+    // Update UI
+    update();
+
+    print('✅ Preview cleared, URL cleared, MREC reloading');
+  }
 }
-
-
-
-
-
-
-

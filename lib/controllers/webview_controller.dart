@@ -1,5 +1,5 @@
 
-// ignore_for_file: deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
+// ignore_for_file: invalid_null_aware_operator, deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
 
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
