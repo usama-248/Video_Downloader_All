@@ -104,6 +104,35 @@ class HomeController extends GetxController {
     });
   }
 
+  // ==================== Helper Methods ====================
+
+  /// Check if URL is from Facebook
+  bool _isFacebookUrl(String url) {
+    if (url.isEmpty) return false;
+    final lowerUrl = url.toLowerCase();
+    return lowerUrl.contains('facebook.com') ||
+        lowerUrl.contains('fb.watch') ||
+        lowerUrl.contains('fbcdn') ||
+        lowerUrl.contains('fbsv') ||
+        (lowerUrl.contains('video') && lowerUrl.contains('facebook')) ||
+        (lowerUrl.contains('reel') && lowerUrl.contains('facebook'));
+  }
+
+  /// Show invalid URL snackbar
+  void _showInvalidUrlSnackbar() {
+    Get.snackbar(
+      'Invalid URL',
+      'This app only supports Facebook video downloads. Please enter a valid Facebook video URL.',
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+      snackPosition: SnackPosition.BOTTOM,
+      icon: const Icon(Icons.error_outline, color: Colors.white),
+      margin: const EdgeInsets.all(10),
+      borderRadius: 12,
+    );
+  }
+
   // ==================== SCREEN TIME TRACKING ====================
 
   void _startScreenTimeTracking() {
@@ -952,6 +981,12 @@ class HomeController extends GetxController {
       return;
     }
 
+    // Check if URL is from Facebook
+    if (!_isFacebookUrl(url)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
+
     await logFetchVideo(url);
     await showInterstitialAd();
 
@@ -976,7 +1011,13 @@ class HomeController extends GetxController {
 
   Future<void> _fetchMetadata(String url) async {
     if (_isClosed) return;
-    if (url.isEmpty || !url.contains(AppEnv.facebookHost)) return;
+
+    // Double-check Facebook URL before fetching metadata
+    if (url.isEmpty || !_isFacebookUrl(url)) {
+      _showInvalidUrlSnackbar();
+      showVideoPreview.value = false;
+      return;
+    }
 
     try {
       final metadata = await MetadataFetch.extract(url);
@@ -1003,6 +1044,12 @@ class HomeController extends GetxController {
       return;
     }
 
+    // Check if URL is from Facebook
+    if (!_isFacebookUrl(finalUrl)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
+
     await logNavigateToWebView(finalUrl);
     await logDownloadClick();
     await showInterstitialAd();
@@ -1024,20 +1071,41 @@ class HomeController extends GetxController {
   Future<void> shareVideo() async {
     if (_isClosed) return;
 
+    String videoUrl = getUrlText();
+    if (videoUrl.isEmpty) {
+      Get.snackbar('Error', 'No video URL to share');
+      return;
+    }
+
+    // Check if URL is from Facebook
+    if (!_isFacebookUrl(videoUrl)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
+
     await logShareVideo();
 
-    String videoUrl = getUrlText();
-    if (videoUrl.isNotEmpty) {
-      Get.snackbar(
-        'Share',
-        'Sharing video...',
-        duration: const Duration(seconds: 1),
-      );
-    }
+    Get.snackbar(
+      'Share',
+      'Sharing video...',
+      duration: const Duration(seconds: 1),
+    );
   }
 
   Future<void> saveToDevice() async {
     if (_isClosed) return;
+
+    String videoUrl = getUrlText();
+    if (videoUrl.isEmpty) {
+      Get.snackbar('Error', 'No video URL to save');
+      return;
+    }
+
+    // Check if URL is from Facebook
+    if (!_isFacebookUrl(videoUrl)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
 
     await logSaveToDevice();
 

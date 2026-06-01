@@ -41,7 +41,7 @@ android {
         versionName = "1.0.4"
     }
 
-   signingConfigs {
+ signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String

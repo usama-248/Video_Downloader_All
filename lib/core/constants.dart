@@ -8,8 +8,8 @@ class Constants {
   ];
   
   static const List<String> videoHosts = [
-    // 'youtube.com', 'youtu.be', 'vimeo.com', 'dailymotion.com',
-    // 'twitter.com', 'facebook.com', 'instagram.com', 'tiktok.com'
+    // ONLY Facebook 
+    'facebook.com', 'fb.watch', 'fbcdn.net', 'fbsv.com'
   ];
 }
 

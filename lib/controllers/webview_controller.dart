@@ -1,4 +1,5 @@
 
+
 // ignore_for_file: invalid_null_aware_operator, deprecated_member_use, empty_catches, avoid_print, unnecessary_null_comparison, unused_field
 
 import 'package:get/get.dart';
@@ -82,8 +83,45 @@ class WebViewControllerr extends GetxController {
   Timer? _captureTimer;
   var isShowingDownloadPopup = false.obs;
   bool _popupShownForCurrentVideo = false;
+  
+  // Track if we're currently showing the invalid URL snackbar to avoid spamming
+  bool _isShowingInvalidUrlSnackbar = false;
 
   WebViewControllerr({required this.url});
+
+  // Helper method to check if URL is from Facebook
+  bool _isFacebookUrl(String url) {
+    if (url.isEmpty) return false;
+    final lowerUrl = url.toLowerCase();
+    return lowerUrl.contains('facebook.com') ||
+        lowerUrl.contains('fb.watch') ||
+        lowerUrl.contains('fbcdn') ||
+        lowerUrl.contains('fbsv') ||
+        (lowerUrl.contains('video') && lowerUrl.contains('facebook')) ||
+        (lowerUrl.contains('reel') && lowerUrl.contains('facebook'));
+  }
+
+  // Helper method to show invalid URL snackbar
+// Helper method to show invalid URL snackbar
+void _showInvalidUrlSnackbar() {
+  if (_isShowingInvalidUrlSnackbar) return;
+  _isShowingInvalidUrlSnackbar = true;
+  
+  Get.snackbar(
+    'Invalid URL',
+    'This app only supports Facebook video downloads. Please navigate to a Facebook video.',
+    backgroundColor: Colors.red,
+    colorText: Colors.white,
+    duration: const Duration(seconds: 3),
+    snackPosition: SnackPosition.BOTTOM,
+    icon: const Icon(Icons.error_outline, color: Colors.white),
+  );
+  
+  // Reset the flag after the duration
+  Future.delayed(const Duration(seconds: 3), () {
+    _isShowingInvalidUrlSnackbar = false;
+  });
+}
 
   @override
   void onInit() {
@@ -127,6 +165,7 @@ class WebViewControllerr extends GetxController {
       ..addJavaScriptChannel(
         'VideoChannel',
         onMessageReceived: (JavaScriptMessage message) {
+          // Only process if the current page is Facebook
           _onVideoDetected(message.message);
         },
       )
@@ -142,19 +181,27 @@ class WebViewControllerr extends GetxController {
           },
           onPageFinished: (String url) {
             isLoading.value = false;
-            _injectJS();
-            _startNetworkCapture();
 
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (detectedVideoUrl.value != null &&
-                  showAutoPopup.value &&
-                  !isDownloading.value &&
-                  !isShowingDownloadPopup.value &&
-                  !_popupShownForCurrentVideo) {
-                _popupShownForCurrentVideo = true;
-                _showDownloadOptionsPopup();
-              }
-            });
+            // Only inject JS and start capture for Facebook URLs
+            if (_isFacebookUrl(url)) {
+              _injectJS();
+              _startNetworkCapture();
+
+              Future.delayed(const Duration(milliseconds: 1500), () {
+                if (detectedVideoUrl.value != null &&
+                    showAutoPopup.value &&
+                    !isDownloading.value &&
+                    !isShowingDownloadPopup.value &&
+                    !_popupShownForCurrentVideo &&
+                    _isFacebookUrl(detectedVideoUrl.value!)) {
+                  _popupShownForCurrentVideo = true;
+                  _showDownloadOptionsPopup();
+                }
+              });
+            } else {
+              // Show snackbar for non-Facebook URLs
+              _showInvalidUrlSnackbar();
+            }
           },
           onWebResourceError: (WebResourceError error) {
             if (error.errorCode == -2 ||
@@ -167,16 +214,23 @@ class WebViewControllerr extends GetxController {
             }
           },
           onNavigationRequest: (NavigationRequest request) {
-            final url = request.url;
-            if (url.startsWith('fb://') ||
-                url.startsWith('intent://') ||
-                url.startsWith('tel:') ||
-                url.startsWith('sms:') ||
-                url.startsWith('mailto:')) {
+            final String requestUrl = request.url;
+            
+            // Block non-http/https URLs
+            if (!requestUrl.startsWith('http') && !requestUrl.startsWith('https')) {
               return NavigationDecision.prevent;
             }
-            _checkUrlForVideo(url);
-            return NavigationDecision.navigate;
+            
+            // Check if the navigation is to a Facebook URL
+            if (_isFacebookUrl(requestUrl)) {
+              _checkUrlForVideo(requestUrl);
+              return NavigationDecision.navigate;
+            } else {
+              // Block navigation to non-Facebook URLs (like YouTube)
+              print('Blocked navigation to non-Facebook URL: $requestUrl');
+              _showInvalidUrlSnackbar();
+              return NavigationDecision.prevent;
+            }
           },
         ),
       );
@@ -234,6 +288,12 @@ class WebViewControllerr extends GetxController {
     if (!url.startsWith('http') && !url.startsWith('https')) {
       return;
     }
+
+    // Only process Facebook video URLs
+    if (!_isFacebookUrl(url)) {
+      return;
+    }
+
     final lowerUrl = url.toLowerCase();
     if (lowerUrl.contains('.mp4') ||
         lowerUrl.contains('.m3u8') ||
@@ -265,6 +325,14 @@ class WebViewControllerr extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = null;
+      
+      // Only load Facebook URLs
+      if (!_isFacebookUrl(url)) {
+        _showInvalidUrlSnackbar();
+        isLoading.value = false;
+        return;
+      }
+      
       final uri = Uri.parse(url);
       await webController.loadRequest(uri);
     } catch (e) {
@@ -311,6 +379,12 @@ class WebViewControllerr extends GetxController {
   }
 
   void _onVideoDetected(String url) {
+    // Only process Facebook video URLs
+    if (!_isFacebookUrl(url)) {
+      print('Non-Facebook URL detected and ignored: $url');
+      return;
+    }
+
     if (!url.contains('.mp4') &&
         !url.contains('video') &&
         !url.contains('reel') &&
@@ -320,7 +394,7 @@ class WebViewControllerr extends GetxController {
 
     if (detectedVideoUrl.value == url) return;
 
-    print('Video detected: $url');
+    print('Facebook video detected: $url');
     detectedVideoUrl.value = url;
     isVideoDetected.value = true;
     _popupShownForCurrentVideo = false;
@@ -329,6 +403,11 @@ class WebViewControllerr extends GetxController {
   }
 
   Future<void> _fetchFileSizes(String videoUrl) async {
+    // Only process Facebook URLs
+    if (!_isFacebookUrl(videoUrl)) {
+      return;
+    }
+
     isFetchingSizes.value = true;
     try {
       final dio = Dio();
@@ -509,6 +588,13 @@ class WebViewControllerr extends GetxController {
     String historyLabel,
     String? expectedSize,
   ) async {
+    // Check if the video URL is from Facebook before proceeding
+    if (detectedVideoUrl.value == null ||
+        !_isFacebookUrl(detectedVideoUrl.value!)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
+
     _pendingTier = tier;
     _pendingHistoryLabel = historyLabel;
     _pendingExpectedSize = expectedSize;
@@ -527,6 +613,13 @@ class WebViewControllerr extends GetxController {
     String historyLabel,
     String? expectedSize,
   ) async {
+    // Final check before download
+    if (detectedVideoUrl.value == null ||
+        !_isFacebookUrl(detectedVideoUrl.value!)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
+
     if (tier.startsWith('Audio_')) {
       final bitrate = tier.split('_')[1];
       await _extractAndDownloadAudio(historyLabel, expectedSize, bitrate);
@@ -681,7 +774,11 @@ class WebViewControllerr extends GetxController {
     String? audioSize,
     String bitrate,
   ) async {
-    if (detectedVideoUrl.value == null) return;
+    if (detectedVideoUrl.value == null ||
+        !_isFacebookUrl(detectedVideoUrl.value!)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
     _resetProgressState(
       historyQualityLabel,
       expectedSize: audioSize,
@@ -722,6 +819,12 @@ class WebViewControllerr extends GetxController {
     String historyQualityLabel,
     String bitrate,
   ) async {
+    // Check if URL is from Facebook
+    if (!_isFacebookUrl(url)) {
+      _showInvalidUrlSnackbar();
+      return null;
+    }
+
     try {
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 30);
@@ -806,7 +909,11 @@ class WebViewControllerr extends GetxController {
     String historyQualityLabel,
     String? expectedSize,
   ) async {
-    if (detectedVideoUrl.value == null) return;
+    if (detectedVideoUrl.value == null ||
+        !_isFacebookUrl(detectedVideoUrl.value!)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
     bool isLowQuality = quality == '144p' || quality == '360p';
     _resetProgressState(
       historyQualityLabel,
@@ -889,6 +996,12 @@ class WebViewControllerr extends GetxController {
     String fileName,
     String historyQualityLabel,
   ) async {
+    // Check if URL is from Facebook
+    if (!_isFacebookUrl(url)) {
+      _showInvalidUrlSnackbar();
+      return null;
+    }
+
     try {
       final dio = Dio();
       dio.options.connectTimeout = const Duration(seconds: 30);
@@ -1193,6 +1306,12 @@ class WebViewControllerr extends GetxController {
       return;
     }
 
+    // Check if the detected video URL is from Facebook
+    if (!_isFacebookUrl(detectedVideoUrl.value!)) {
+      _showInvalidUrlSnackbar();
+      return;
+    }
+
     isShowingDownloadPopup.value = true;
 
     Get.bottomSheet(
@@ -1237,13 +1356,18 @@ class WebViewControllerr extends GetxController {
   }
 
   Future<void> openInChrome(String url) async {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    // Only allow opening Facebook URLs in Chrome
+    if (_isFacebookUrl(url)) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      _showInvalidUrlSnackbar();
+    }
   }
 
   WebViewController get controller => webController;
 }
 
-// Download Quality Bottom Sheet
+// Download Quality Bottom Sheet (unchanged - remains the same)
 class _DownloadQualityBottomSheet extends StatefulWidget {
   final bool isFetchingSizes;
   final String? size1080p;
