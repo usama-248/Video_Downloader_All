@@ -37,11 +37,11 @@ android {
         // FFmpeg Kit requires API 24+.
         minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.0.5"
     }
 
- signingConfigs {
+    signingConfigs {
         create("release") {
             keyAlias = keystoreProperties["keyAlias"] as String
             keyPassword = keystoreProperties["keyPassword"] as String
